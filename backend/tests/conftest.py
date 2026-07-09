@@ -88,7 +88,7 @@ def auth_headers(citizen_token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {citizen_token}"}
 
 
-from app.models.intake import CameraApiKey, CameraDevice
+from app.models.intake import CameraApiKey, CameraDevice, Case, IntakeEvent
 
 
 @pytest.fixture()
@@ -106,3 +106,27 @@ def camera_key(db: Session, camera_device: CameraDevice) -> tuple[str, CameraApi
     db.add(key)
     db.commit()
     return raw, key
+
+
+@pytest.fixture()
+def reviewer_user(db: Session, seeded_roles) -> User:
+    user = User(username="reviewer1", password_hash=hash_password("pass1234"),
+                email="reviewer@example.com", role_id=seeded_roles["reviewer"].id)
+    db.add(user); db.commit()
+    return user
+
+
+@pytest.fixture()
+def reviewer_auth_headers(reviewer_user: User) -> dict[str, str]:
+    token = create_access_token(subject=str(reviewer_user.id), role="reviewer")
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture()
+def pending_case(db: Session, citizen_user: User):
+    ev = IntakeEvent(source_type="citizen", source_id=citizen_user.id, image_hash="pend1",
+                     location_text="路口A")
+    db.add(ev); db.flush()
+    case = Case(case_no="CASE-PEND-1", intake_event_id=ev.id, status="pending_human_review")
+    db.add(case); db.commit()
+    return case
