@@ -1,4 +1,5 @@
 # app/services/reward_service.py
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -21,3 +22,18 @@ class RewardService:
         self.db.commit()
         self.db.refresh(reward)
         return reward
+
+    def list_rewards(self, *, page: int, page_size: int,
+                     status: str | None = None) -> dict:
+        q = self.db.query(Reward)
+        if status:
+            q = q.filter(Reward.status == status)
+        total = q.count()
+        items = q.order_by(Reward.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+        return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+    def get_reward(self, reward_id: int) -> Reward:
+        r = self.db.get(Reward, reward_id)
+        if r is None:
+            raise HTTPException(status_code=404, detail="奖励记录不存在")
+        return r
