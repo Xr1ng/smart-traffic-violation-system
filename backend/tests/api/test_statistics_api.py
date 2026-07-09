@@ -61,3 +61,28 @@ def test_by_time_success(client, reviewer_user, reviewer_auth_headers, db):
 
 def test_by_location_requires_auth(client):
     assert client.get("/api/v1/statistics/by-location").status_code == 401
+
+
+def test_by_location_citizen_forbidden(client, citizen_user, auth_headers):
+    assert client.get("/api/v1/statistics/by-location", headers=auth_headers).status_code == 403
+
+
+def test_by_type_requires_auth(client):
+    assert client.get("/api/v1/statistics/by-type").status_code == 401
+
+
+def test_by_type_citizen_forbidden(client, citizen_user, auth_headers):
+    assert client.get("/api/v1/statistics/by-type", headers=auth_headers).status_code == 403
+
+
+def test_by_time_requires_auth(client):
+    assert client.get("/api/v1/statistics/by-time").status_code == 401
+
+
+def test_by_time_citizen_forbidden(client, citizen_user, auth_headers):
+    assert client.get("/api/v1/statistics/by-time", headers=auth_headers).status_code == 403
+
+
+def test_overview_invalid_time_returns_422(client, reviewer_user, reviewer_auth_headers):
+    r = client.get("/api/v1/statistics/overview?start_time=not-a-date", headers=reviewer_auth_headers)
+    assert r.status_code == 422

@@ -80,3 +80,25 @@ def test_by_time_daily_grouping(db):
     assert out.items[0].count == 2
     assert out.items[1].date == "2026-07-09"
     assert out.items[1].count == 1
+
+
+def test_overview_time_window_excludes_outside(db):
+    t1 = datetime(2026, 7, 8, 10, 0, tzinfo=timezone.utc)
+    t2 = datetime(2026, 7, 10, 10, 0, tzinfo=timezone.utc)
+    _seed_case(db, status="approved", created_at=t1, case_no="C1")
+    _seed_case(db, status="approved", created_at=t2, case_no="C2")
+    # 窄窗只含 t2
+    out = StatisticsService(db).overview("2026-07-09T00:00:00", "2026-07-11T00:00:00")
+    assert out.total_cases == 1
+    assert out.approved_count == 1
+
+
+def test_by_type_time_window_excludes_outside(db):
+    t1 = datetime(2026, 7, 8, 10, 0, tzinfo=timezone.utc)
+    t2 = datetime(2026, 7, 10, 10, 0, tzinfo=timezone.utc)
+    c = _seed_case(db, status="approved", created_at=t1, case_no="C1")
+    _seed_violation(db, case=c, violation_type="超速", location_text="A", created_at=t1, vio_no="V1")
+    _seed_violation(db, case=c, violation_type="超速", location_text="A", created_at=t2, vio_no="V2")
+    out = StatisticsService(db).by_type("2026-07-09T00:00:00", "2026-07-11T00:00:00")
+    assert len(out.items) == 1
+    assert out.items[0].count == 1
