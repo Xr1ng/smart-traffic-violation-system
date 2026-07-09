@@ -52,7 +52,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { mockAdminUpload } from '@/api/intake'
+import { adminUpload } from '@/api/intake'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()

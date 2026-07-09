@@ -179,6 +179,60 @@ const routes = [
         meta: { title: '操作日志' }
       },
       {
+        path: 'announcements',
+        name: 'AdminAnnouncements',
+        component: () => import('@/views/admin/Announcement.vue'),
+        meta: { title: '公告管理' }
+      },
+      {
+        path: 'violations/upload',
+        name: 'AdminViolationUpload',
+        component: () => import('@/views/admin/ViolationUpload.vue'),
+        meta: { title: '违章上传' }
+      },
+      {
+        path: 'violations/:id',
+        name: 'AdminViolationReview',
+        component: () => import('@/views/admin/ViolationReview.vue'),
+        meta: { title: '违章审核' }
+      },
+      {
+        path: 'violations',
+        name: 'AdminViolationList',
+        component: () => import('@/views/admin/ViolationList.vue'),
+        meta: { title: '违章列表' }
+      },
+      {
+        path: 'vehicles',
+        name: 'AdminVehicles',
+        component: () => import('@/views/admin/VehicleList.vue'),
+        meta: { title: '车辆管理' }
+      },
+      {
+        path: 'drivers',
+        name: 'AdminDrivers',
+        component: () => import('@/views/admin/DriverList.vue'),
+        meta: { title: '驾驶人管理' }
+      },
+      {
+        path: 'search',
+        name: 'AdminAdvancedSearch',
+        component: () => import('@/views/admin/AdvancedSearch.vue'),
+        meta: { title: '高级搜索' }
+      },
+      {
+        path: 'system-logs',
+        name: 'AdminSystemLogs',
+        component: () => import('@/views/admin/SystemLog.vue'),
+        meta: { title: '系统日志' }
+      },
+      {
+        path: 'database',
+        name: 'AdminDatabase',
+        component: () => import('@/views/system/DatabaseMaintain.vue'),
+        meta: { title: '数据库维护' }
+      },
+      {
         path: 'profile',
         name: 'AdminProfile',
         component: () => import('@/views/Profile.vue'),

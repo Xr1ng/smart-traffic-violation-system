@@ -146,6 +146,41 @@ export const getAuditLogs = async (params = {}) => {
   return pageOk(mockLogs, mockLogs.length)
 }
 
+// 公告管理
+const mockAnnouncements = [
+  { id: 1, title: '系统升级通知', content: '系统将于本周六凌晨2:00-4:00进行升级维护，届时暂停服务。', created_at: '2026-07-05 10:00:00' },
+  { id: 2, title: '新版违章举报功能上线', content: '新版随手拍功能已上线，支持多张图片上传，AI识别更精准。', created_at: '2026-07-03 09:00:00' }
+]
+
+export const getAnnouncements = async () => {
+  await delay()
+  return ok(mockAnnouncements)
+}
+
+export const createAnnouncement = async (data) => {
+  await delay(300)
+  return ok({ id: Date.now(), ...data, message: '公告发布成功' })
+}
+
+export const updateAnnouncement = async (id, data) => {
+  await delay(300)
+  return ok({ id, ...data, message: '公告更新成功' })
+}
+
+export const deleteAnnouncement = async (id) => {
+  await delay(300)
+  return ok({ id, message: '公告删除成功' })
+}
+
+// 数据库维护
+export const backupDatabase = async () => {
+  await delay(1000)
+  return ok({ filename: `backup_${Date.now()}.sql`, size: '12.5MB', message: '数据库备份成功' })
+}
+
+// 系统日志（复用审计日志 mock 数据）
+export const getLogs = getAuditLogs
+
 // 通知模块
 export const getNotifications = async (params = {}) => {
   await delay()
