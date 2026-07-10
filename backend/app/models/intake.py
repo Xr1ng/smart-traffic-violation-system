@@ -14,6 +14,7 @@ class IntakeEvent(Base):
     source_type: Mapped[str] = mapped_column(String(16))  # citizen/camera/admin
     source_id: Mapped[int | None] = mapped_column()  # 举报人/管理员/摄像头 id
     location_text: Mapped[str | None] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(String(512))
     longitude: Mapped[float | None] = mapped_column(Float)
     latitude: Mapped[float | None] = mapped_column(Float)
     captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

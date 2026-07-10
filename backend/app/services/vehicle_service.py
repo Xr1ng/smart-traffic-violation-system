@@ -21,10 +21,13 @@ class VehicleService:
         self.db.refresh(v)
         return v
 
-    def list_vehicles(self, *, page: int, page_size: int, plate_no: str | None = None) -> dict:
+    def list_vehicles(self, *, page: int, page_size: int, plate_no: str | None = None,
+                      owner_id: int | None = None) -> dict:
         q = self.db.query(Vehicle)
         if plate_no:
             q = q.filter(Vehicle.plate_no.ilike(f"%{plate_no}%"))
+        if owner_id is not None:
+            q = q.filter(Vehicle.owner_id == owner_id)
         total = q.count()
         items = q.order_by(Vehicle.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
         return {"items": items, "total": total, "page": page, "page_size": page_size}
@@ -53,3 +56,14 @@ class VehicleService:
         self.db.commit()
         self.db.refresh(v)
         return v
+
+    def unbind_vehicle(self, vehicle_id: int, owner_id: int) -> None:
+        vehicle = (
+            self.db.query(Vehicle)
+            .filter(Vehicle.id == vehicle_id, Vehicle.owner_id == owner_id)
+            .first()
+        )
+        if vehicle is None:
+            raise HTTPException(status_code=404, detail="车辆不存在")
+        vehicle.owner_id = None
+        self.db.commit()

@@ -2,7 +2,7 @@
 from datetime import datetime
 
 from fastapi import HTTPException
-from sqlalchemy import case
+from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
 
 from app.models.intake import Case, IntakeEvent
@@ -15,6 +15,7 @@ class CaseService:
 
     def list_cases(self, *, user: User, status: str | None = None, source_type: str | None = None,
                    location_text: str | None = None, plate_no: str | None = None,
+                   keyword: str | None = None,
                    start_time: datetime | None = None, end_time: datetime | None = None,
                    page: int = 1, page_size: int = 20) -> dict:
         role = user.role.code
@@ -22,7 +23,9 @@ class CaseService:
             raise HTTPException(status_code=403, detail="摄像头无权查询业务数据")
         q = self.db.query(Case)
         # source_type / source_id / captured_at / location_text 在 IntakeEvent 上，按需关联
-        need_join = bool(role == "citizen" or location_text or source_type or start_time or end_time)
+        need_join = bool(
+            role == "citizen" or location_text or source_type or keyword or start_time or end_time
+        )
         if need_join:
             q = q.join(IntakeEvent, Case.intake_event_id == IntakeEvent.id)
         if role == "citizen":
@@ -39,6 +42,13 @@ class CaseService:
             q = q.filter(IntakeEvent.captured_at <= end_time)
         if plate_no:
             q = q.filter(Case.plate_no == plate_no)
+        if keyword:
+            pattern = f"%{keyword}%"
+            q = q.filter(or_(
+                Case.case_no.ilike(pattern),
+                Case.plate_no.ilike(pattern),
+                IntakeEvent.location_text.ilike(pattern),
+            ))
         # reviewer / admin: pending_human_review 优先，再 id desc
         if role in ("reviewer", "admin"):
             q = q.order_by(case((Case.status == "pending_human_review", 0), else_=1), Case.id.desc())

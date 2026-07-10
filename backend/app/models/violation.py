@@ -12,7 +12,7 @@ class Vehicle(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     plate_no: Mapped[str] = mapped_column(String(16), unique=True, index=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     vehicle_type: Mapped[str | None] = mapped_column(String(32))
     color: Mapped[str | None] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

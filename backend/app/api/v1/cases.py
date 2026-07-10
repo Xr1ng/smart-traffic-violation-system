@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import get_current_user, get_notification_provider, require_role
 from app.models.user import User
+from app.models.violation import Reward
 from app.schemas.case import (
     ApproveRequest, CaseDetail, CaseListResponse, CaseListItem, RejectRequest, RecheckResponse,
 )
@@ -18,22 +19,44 @@ router = APIRouter(prefix="/cases", tags=["cases"])
 @router.get("", response_model=CaseListResponse)
 def list_cases(status: str | None = None, source_type: str | None = None,
                location_text: str | None = None, plate_no: str | None = None,
+               keyword: str | None = None,
                page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100),
                db: Session = Depends(get_db),
                user: User = Depends(require_role("citizen", "reviewer", "admin"))) -> CaseListResponse:
     res = CaseService(db).list_cases(
         user=user, status=status, source_type=source_type,
-        location_text=location_text, plate_no=plate_no, page=page, page_size=page_size)
+        location_text=location_text, plate_no=plate_no, keyword=keyword,
+        page=page, page_size=page_size)
+    case_ids = [case.id for case in res["items"]]
+    rewards = (
+        db.query(Reward).filter(Reward.case_id.in_(case_ids)).all()
+        if case_ids
+        else []
+    )
+    reward_by_case = {reward.case_id: reward.amount for reward in rewards}
+    source_desc_map = {"citizen": "市民举报", "camera": "摄像头抓拍", "admin": "后台上传"}
     items = []
     for c in res["items"]:
         ev = c.intake_event
+        media = {}
+        if ev:
+            original = next(
+                (asset for asset in ev.media_assets if asset.asset_type == "original"),
+                None,
+            )
+            if original:
+                media["original_url"] = original.url
         items.append(CaseListItem(
             id=c.id,
             case_no=c.case_no, status=c.status,
             source_type=ev.source_type if ev else None,
+            source_desc=source_desc_map.get(ev.source_type, "") if ev else "",
+            description=ev.description if ev else None,
             plate_no=c.plate_no, violation_type=c.violation_type,
             captured_at=str(ev.captured_at) if ev and ev.captured_at else None,
             location_text=ev.location_text if ev else None,
+            media=media,
+            reward=reward_by_case.get(c.id),
         ))
     return CaseListResponse(items=items, total=res["total"], page=res["page"], page_size=res["page_size"])
 

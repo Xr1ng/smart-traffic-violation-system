@@ -20,6 +20,12 @@ class VehicleCreateIn(BaseModel):
     color: str | None = None
 
 
+class VehicleBindIn(BaseModel):
+    plate_no: str
+    vehicle_type: str | None = None
+    color: str | None = None
+
+
 class VehicleUpdateIn(BaseModel):
     plate_no: str | None = None
     owner_id: int | None = None

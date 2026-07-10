@@ -7,10 +7,14 @@ class CaseListItem(BaseModel):
     case_no: str
     status: str
     source_type: str | None = None
+    source_desc: str = ""
+    description: str | None = None
     plate_no: str | None = None
     violation_type: str | None = None
     captured_at: str | None = None
     location_text: str | None = None
+    media: dict = {}
+    reward: int | None = None
 
 
 class CaseListResponse(BaseModel):
