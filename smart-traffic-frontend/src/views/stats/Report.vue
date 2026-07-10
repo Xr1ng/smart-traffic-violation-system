@@ -41,38 +41,11 @@
           </div>
         </template>
 
-        <!-- 摘要 -->
-        <el-alert :title="'报告摘要'" type="info" :closable="false" style="margin-bottom:20px">
-          <p style="margin:8px 0;line-height:1.8">{{ currentReport.summary }}</p>
-        </el-alert>
-
-        <!-- 重点发现 -->
-        <h4 style="margin:16px 0 12px">📌 重点发现</h4>
-        <el-timeline>
-          <el-timeline-item
-            v-for="(h, i) in currentReport.highlights"
-            :key="i"
-            :timestamp="'发现 ' + (i + 1)"
-            placement="top"
-          >
-            <el-card shadow="hover">
-              <p>{{ h }}</p>
-            </el-card>
-          </el-timeline-item>
-        </el-timeline>
-
-        <!-- 治理建议 -->
-        <h4 style="margin:24px 0 12px">💡 治理建议</h4>
-        <el-row :gutter="16">
-          <el-col :span="12" v-for="(s, i) in currentReport.suggestions" :key="i">
-            <el-card shadow="hover" style="margin-bottom:12px">
-              <div class="suggestion-item">
-                <el-tag type="primary" size="small" class="sug-num">{{ i + 1 }}</el-tag>
-                <span>{{ s }}</span>
-              </div>
-            </el-card>
-          </el-col>
-        </el-row>
+        <div class="report-meta">
+          <span>作者：{{ currentReport.author }}</span>
+          <span>生成时间：{{ formatTime(currentReport.generated_at) }}</span>
+        </div>
+        <div class="report-content">{{ currentReport.content }}</div>
       </el-card>
     </div>
   </div>
@@ -108,6 +81,10 @@ async function generateReport() {
 function handleExport() {
   ElMessage.success('正在导出 PDF...')
 }
+
+function formatTime(value) {
+  return value ? new Date(value).toLocaleString('zh-CN') : ''
+}
 </script>
 
 <style scoped>
@@ -123,6 +100,13 @@ function handleExport() {
 .generate-header { font-size: 18px; font-weight: 600; }
 .report-title-row { display: flex; justify-content: space-between; align-items: center; }
 .report-title-row h3 { margin: 0; }
-.suggestion-item { display: flex; align-items: flex-start; gap: 10px; line-height: 1.6; }
-.sug-num { flex-shrink: 0; margin-top: 2px; }
+.report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.report-content { line-height: 1.8; white-space: pre-wrap; }
 </style>

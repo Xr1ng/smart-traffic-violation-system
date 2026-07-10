@@ -5,8 +5,9 @@
       <div class="toolbar-left">
         <el-radio-group v-model="filter.status" size="small" @change="fetchCases">
           <el-radio-button value="">全部</el-radio-button>
-          <el-radio-button value="uploaded">待审核</el-radio-button>
-          <el-radio-button value="approved">已通过</el-radio-button>
+          <el-radio-button value="uploaded">待初审</el-radio-button>
+          <el-radio-button value="pending_human_review">待终审</el-radio-button>
+          <el-radio-button value="notified">已通知</el-radio-button>
           <el-radio-button value="rejected">已驳回</el-radio-button>
         </el-radio-group>
         <el-select v-model="filter.source_type" placeholder="来源" clearable size="small" style="width:120px;margin-left:12px" @change="fetchCases">
@@ -31,7 +32,7 @@
       <el-card
         v-for="item in cases"
         :key="item.id"
-        :class="['case-card', { 'is-pending': item.status === 'pending_human_review' }]"
+        :class="['case-card', { 'is-pending': ['uploaded', 'pending_human_review'].includes(item.status) }]"
         shadow="hover"
         @click="openDetail(item.id)"
       >
@@ -76,7 +77,7 @@
           <span class="ai-confidence">置信度 {{ (item.ai_review.ai_confidence * 100).toFixed(0) }}%</span>
         </div>
         <div class="card-footer" v-else>
-          <el-tag size="small" type="info">AI 处理中...</el-tag>
+          <el-tag size="small" type="info">{{ caseAiFallbackText(item.status) }}</el-tag>
         </div>
       </el-card>
     </div>
@@ -98,6 +99,7 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchCases as getCases } from '@/api/case'
+import { caseAiFallbackText } from '@/utils/contracts'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -116,8 +118,8 @@ const filter = reactive({
 
 // 状态映射
 const statusMap = {
-  uploaded: '待审核', detecting: '识别中', ai_reviewing: 'AI 初审中',
-  pending_human_review: '待审核', approved: '已通过', rejected: '已驳回',
+  uploaded: '待初审', detecting: '识别中', ai_reviewing: 'AI 初审中',
+  pending_human_review: '待终审', approved: '已通过', rejected: '已驳回',
   archived: '已归档', notified: '已通知'
 }
 const statusTypeMap = {
@@ -149,10 +151,14 @@ async function fetchCases() {
     })
     cases.value = res.data.items
     total.value = res.data.total
-    // 统计待审核数
-    if (!filter.status || filter.status === 'pending_human_review') {
-      const pendingRes = await getCases({ status: 'pending_human_review', page: 1, page_size: 1 })
-      pendingTotal.value = pendingRes.data.total
+    if (!filter.status || ['uploaded', 'pending_human_review'].includes(filter.status)) {
+      const [uploadedRes, pendingRes] = await Promise.all([
+        getCases({ status: 'uploaded', page: 1, page_size: 1 }),
+        getCases({ status: 'pending_human_review', page: 1, page_size: 1 })
+      ])
+      pendingTotal.value = uploadedRes.data.total + pendingRes.data.total
+    } else {
+      pendingTotal.value = 0
     }
   } catch (e) { console.error('[Workbench] fetchCases failed', e); ElMessage.error('加载案件失败') }
   finally { loading.value = false }
@@ -167,7 +173,7 @@ let pollTimer = null
 onMounted(() => {
   fetchCases()
   pollTimer = setInterval(() => {
-    if (filter.status === 'pending_human_review' || !filter.status) {
+    if (!filter.status || ['uploaded', 'pending_human_review'].includes(filter.status)) {
       fetchCases()
     }
   }, 15000)

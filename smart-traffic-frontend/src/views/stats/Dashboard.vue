@@ -4,7 +4,7 @@
       <h2 class="page-title">统计分析台</h2>
       <div class="header-actions">
         <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" size="small" style="width:240px" />
-        <el-button type="primary" size="small" @click="router.push('/stats/report')">
+        <el-button type="primary" size="small" @click="router.push(reportPathForRoute(route.path))">
           <el-icon><Document /></el-icon>生成 LLM 分析报告
         </el-button>
       </div>
@@ -53,10 +53,12 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { fetchOverview, fetchByTime, fetchByType, fetchByLocation } from '@/api/statistics'
+import { getStatisticsCards, mapNamedSeries, reportPathForRoute } from '@/utils/contracts'
 import * as echarts from 'echarts'
 
+const route = useRoute()
 const router = useRouter()
 const dateRange = ref([])
 const trendChart = ref(null)
@@ -68,20 +70,7 @@ const trend = ref([])
 const typeRatio = ref([])
 const regionRank = ref([])
 
-const overviewCards = computed(() => {
-  const d = overview.value || {}
-  const total = d.total_cases || 0
-  const approved = d.approved_count || 0
-  const rejected = d.rejected_count || 0
-  return [
-    { label: '总案件数', value: total, color: '#409eff' },
-    { label: '已通过', value: approved, color: '#67c23a' },
-    { label: '已驳回', value: rejected, color: '#f56c6c' },
-    { label: '通过率', value: (d.approval_rate != null ? (d.approval_rate * 100).toFixed(1) + '%' : 'N/A'), color: '#409eff' },
-    { label: '待审核', value: d.pending_count || 0, color: '#e6a23c' },
-    { label: '数据时段', value: d.period ? d.period.start?.slice(0, 10) + '~' + d.period.end?.slice(0, 10) : '全部', color: '#909399' }
-  ]
-})
+const overviewCards = computed(() => getStatisticsCards(overview.value))
 
 async function loadData() {
   const params = {}
@@ -97,8 +86,8 @@ async function loadData() {
   ])
   overview.value = ov.data
   trend.value = (tr.data?.items || []).map(t => ({ date: t.date, count: t.count }))
-  typeRatio.value = (ty.data?.items || []).map(t => ({ name: t.violation_type, value: t.count }))
-  regionRank.value = (rg.data?.items || []).map(r => ({ name: r.location_text, value: r.count }))
+  typeRatio.value = mapNamedSeries(ty.data)
+  regionRank.value = mapNamedSeries(rg.data)
 }
 
 function renderTrend() {
@@ -128,7 +117,7 @@ function renderType() {
       type: 'pie',
       radius: ['45%', '75%'],
       center: ['50%', '45%'],
-      data: typeRatio.value.map(t => ({ name: t.name, value: t.value })),
+      data: typeRatio.value,
       label: { show: true, formatter: '{b}\n{d}%' }
     }]
   })

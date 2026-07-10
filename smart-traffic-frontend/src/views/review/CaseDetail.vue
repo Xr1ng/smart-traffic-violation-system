@@ -192,12 +192,12 @@
         </el-card>
 
         <!-- 已审核结果展示 -->
-        <el-card v-else-if="detail.status === 'approved' || detail.status === 'rejected'" style="margin-top:12px">
+        <el-card v-else-if="isApprovedCaseStatus(detail.status) || detail.status === 'rejected'" style="margin-top:12px">
           <template #header><span>审核结果</span></template>
           <el-result
-            :icon="detail.status === 'approved' ? 'success' : 'error'"
-            :title="detail.status === 'approved' ? '已审核通过' : '已驳回'"
-            :sub-title="detail.review_opinion || ''"
+            :icon="isApprovedCaseStatus(detail.status) ? 'success' : 'error'"
+            :title="isApprovedCaseStatus(detail.status) ? '已审核通过' : '已驳回'"
+            :sub-title="getCaseReviewOpinion(detail)"
           >
             <template #extra v-if="detail.violation_type">
               <el-descriptions :column="2" border size="small">
@@ -216,6 +216,12 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchCaseDetail as getCaseDetail, approveCase, rejectCase } from '@/api/case'
+import {
+  buildApprovePayload,
+  buildRejectPayload,
+  getCaseReviewOpinion,
+  isApprovedCaseStatus
+} from '@/utils/contracts'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -250,8 +256,11 @@ const objLabelMap = { vehicle: '车辆', stop_line: '停止线', red_light: '红
 
 function statusText(s) { return statusMap[s] || s }
 function statusType(s) {
-  const m = { uploaded: 'danger', pending_human_review: 'danger', approved: 'success', rejected: 'info', detecting: 'warning', ai_reviewing: 'warning' }
-  return m[s] || ''
+  const m = {
+    uploaded: 'danger', pending_human_review: 'danger', approved: 'success',
+    rejected: 'info', detecting: 'warning', ai_reviewing: 'warning', notified: 'success'
+  }
+  return m[s] || 'info'
 }
 function sourceIcon(s) { return s === 'citizen' ? '📱' : s === 'camera' ? '📷' : '👤' }
 function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
@@ -275,7 +284,7 @@ async function fetchDetail() {
 async function handleApprove() {
   submitting.value = true
   try {
-    await approveCase(route.params.id, { ...reviewForm, action: 'approve' })
+    await approveCase(route.params.id, buildApprovePayload(reviewForm))
     ElMessage.success('审核通过，违章记录已生成')
     router.push('/review/workbench')
   } catch { ElMessage.error('操作失败') }
@@ -289,7 +298,7 @@ async function handleReject() {
   }
   submitting.value = true
   try {
-    await rejectCase(route.params.id, { ...reviewForm, action: 'reject' })
+    await rejectCase(route.params.id, buildRejectPayload(reviewForm))
     ElMessage.success('案件已驳回')
     router.push('/review/workbench')
   } catch { ElMessage.error('操作失败') }

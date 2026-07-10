@@ -13,8 +13,8 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item label="驾驶员">
-              <el-input v-model="query.driver" placeholder="输入驾驶员姓名" clearable />
+            <el-form-item label="违章地点">
+              <el-input v-model="query.location" placeholder="输入违章地点" clearable />
             </el-form-item>
           </el-col>
           <el-col :span="6">
@@ -52,16 +52,17 @@
 
     <el-card style="margin-top:16px">
       <el-table :data="results" border stripe v-loading="loading" empty-text="请点击查询按钮搜索">
-        <el-table-column prop="plate_number" label="车牌号" width="120" />
-        <el-table-column prop="driver_name" label="驾驶员" width="100" />
+        <el-table-column prop="violation_no" label="违章编号" min-width="170" />
+        <el-table-column prop="plate_no" label="车牌号" width="120" />
         <el-table-column prop="violation_type" label="违章类型" width="100" />
-        <el-table-column prop="location" label="违章地点" min-width="160" />
-        <el-table-column prop="violation_time" label="违章时间" width="160" />
+        <el-table-column prop="location_text" label="违章地点" min-width="160" />
+        <el-table-column prop="occurred_at" label="违章时间" width="180" />
+        <el-table-column prop="fine_amount" label="罚款（元）" width="100" />
+        <el-table-column prop="points" label="扣分" width="80" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 'approved'" type="success">已通过</el-tag>
-            <el-tag v-else-if="row.status === 'rejected'" type="danger">已驳回</el-tag>
-            <el-tag v-else type="info">待审核</el-tag>
+            <el-tag v-if="row.status === 'pending'" type="info">待处理</el-tag>
+            <el-tag v-else type="info">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
       </el-table>
@@ -81,8 +82,9 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { fetchViolations } from '@/api/violation'
+import { buildViolationQuery } from '@/utils/contracts'
 
-const query = reactive({ plate: '', driver: '', type: '', dateRange: null })
+const query = reactive({ plate: '', location: '', type: '', dateRange: null })
 const results = ref([])
 const loading = ref(false)
 const page = ref(1)
@@ -92,15 +94,7 @@ const total = ref(0)
 async function handleSearch() {
   loading.value = true
   try {
-    const params = { page: page.value, page_size: pageSize.value }
-    if (query.plate) params.plate = query.plate
-    if (query.driver) params.driver = query.driver
-    if (query.type) params.type = query.type
-    if (query.dateRange) {
-      params.start_date = query.dateRange[0]
-      params.end_date = query.dateRange[1]
-    }
-    const res = await fetchViolations(params)
+    const res = await fetchViolations(buildViolationQuery(query, page.value, pageSize.value))
     results.value = res.data.items
     total.value = res.data.total
   } catch { /* handled */ }
