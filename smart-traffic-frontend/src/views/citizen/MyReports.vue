@@ -66,7 +66,7 @@ function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
 async function fetchList() {
   loading.value = true
   try {
-    const res = await fetchCases({ source_type: 'citizen', page: page.value, page_size: pageSize })
+    const res = await fetchCases({ source_type: 'citizen', page: page.value, page_size: pageSize.value })
     list.value = res.data.items
     total.value = res.data.total
   } catch {}

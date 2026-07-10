@@ -64,7 +64,7 @@ const filter = reactive({ action: '', username: '' })
 const actionMap = { login: '登录', approve: '审核通过', reject: '审核驳回', upload: '上传图片', logout: '登出' }
 
 async function fetchLogs() {
-  const res = await fetchAuditLogs({ page: page.value, page_size: pageSize, action: filter.action || undefined })
+  const res = await fetchAuditLogs({ page: page.value, page_size: pageSize.value, action: filter.action || undefined })
   logs.value = res.data.items
   total.value = res.data.total
 }
