@@ -81,7 +81,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { mockReports2, delay } from '@/api/mock'
+import { generateReport } from '@/api/statistics'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -95,10 +95,14 @@ const genForm = reactive({
 
 async function generateReport() {
   generating.value = true
-  await delay(1500)
-  currentReport.value = { ...mockReports2[0] }
+  try {
+    const res = await generateReport({
+      start_time: genForm.dimension === 'week' ? new Date(Date.now()-7*86400000).toISOString() : undefined,
+      end_time: new Date().toISOString(), report_type: '综合' })
+    currentReport.value = res.data
+    ElMessage.success('报告已生成')
+  } catch { ElMessage.error('生成失败') }
   generating.value = false
-  ElMessage.success('报告已生成')
 }
 
 function handleExport() {

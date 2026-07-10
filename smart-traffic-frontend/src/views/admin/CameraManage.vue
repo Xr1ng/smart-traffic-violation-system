@@ -70,64 +70,61 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { mockCameras, delay } from '@/api/mock'
+import { ref, onMounted } from 'vue'
+import { fetchCameras, createCamera, updateCamera, generateKey, revokeKey } from '@/api/system'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-const cameras = ref([...mockCameras.map(c => ({ ...c, api_key: '' }))])
+const cameras = ref([])
 
 const dialog = ref({
   visible: false,
   isEdit: false,
-  form: { camera_id: '', name: '', location_text: '', status: 'active' }
+  form: { device_code: '', location_text: '', status: 'enabled' }
 })
 
 const keyDialog = ref({ visible: false, key: '', cameraId: null })
+
+async function loadCameras() {
+  const res = await fetchCameras({ page_size: 100 })
+  cameras.value = res.data.items
+}
 
 function openDialog(row) {
   if (row) {
     dialog.value = { visible: true, isEdit: true, form: { ...row } }
   } else {
-    dialog.value = { visible: true, isEdit: false, form: { camera_id: '', name: '', location_text: '', status: 'active' } }
+    dialog.value = { visible: true, isEdit: false, form: { device_code: '', location_text: '', status: 'enabled' } }
   }
 }
 
 async function saveCamera() {
-  await delay(300)
+  const f = dialog.value.form
   if (dialog.value.isEdit) {
-    const idx = cameras.value.findIndex(c => c.id === dialog.value.form.id)
-    if (idx > -1) cameras.value[idx] = { ...cameras.value[idx], ...dialog.value.form }
+    await updateCamera(f.id, { location_text: f.location_text, status: f.status })
   } else {
-    cameras.value.push({ ...dialog.value.form, id: Date.now(), created_at: new Date().toISOString() })
+    await createCamera({ device_code: f.device_code, location_text: f.location_text })
   }
-  dialog.value.visible = false
-  ElMessage.success('保存成功')
+  dialog.value.visible = false; loadCameras(); ElMessage.success('保存成功')
 }
 
 function deleteCamera(row) {
-  ElMessageBox.confirm(`确定删除设备 ${row.name} 吗？`, '确认', { type: 'warning' }).then(() => {
-    cameras.value = cameras.value.filter(c => c.id !== row.id)
-    ElMessage.success('已删除')
+  ElMessageBox.confirm('确定停用？', '确认', { type: 'warning' }).then(async () => {
+    await updateCamera(row.id, { status: 'disabled' }); loadCameras()
+    ElMessage.success('已停用')
   })
 }
 
-function showKey(row) {
-  keyDialog.value = { visible: true, key: row.api_key || '未生成', cameraId: row.id }
+function showKey(row) { keyDialog.value = { visible: true, key: '', cameraId: row.id } }
+
+async function doGenerateKey() {
+  const res = await generateKey(keyDialog.value.cameraId)
+  keyDialog.value.key = res.data.raw_key
+  ElMessage.success('新密钥已生成（仅显示一次）')
 }
 
-async function generateKey() {
-  await delay(400)
-  const newKey = 'sk-' + Array.from({ length: 32 }, () => Math.random().toString(36)[2]).join('')
-  keyDialog.value.key = newKey
-  const cam = cameras.value.find(c => c.id === keyDialog.value.cameraId)
-  if (cam) cam.api_key = newKey
-  ElMessage.success('新密钥已生成')
-}
+function copyKey() { navigator.clipboard.writeText(keyDialog.value.key); ElMessage.success('已复制') }
 
-function copyKey() {
-  navigator.clipboard.writeText(keyDialog.value.key)
-  ElMessage.success('已复制到剪贴板')
-}
+onMounted(loadCameras)
 </script>
 
 <style scoped>

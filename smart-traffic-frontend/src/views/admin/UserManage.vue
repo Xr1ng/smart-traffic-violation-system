@@ -60,46 +60,51 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { mockUsers, delay } from '@/api/mock'
+import { ref, onMounted } from 'vue'
+import { fetchUsers, createUser, updateUser } from '@/api/system'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-const roleMap = { citizen: '市民', reviewer: '审核员', admin: '超级管理员' }
-const users = ref([...mockUsers.map(u => ({ ...u, created_at: new Date().toISOString() }))])
+const roleMap = { citizen: '市民', reviewer: '审核员', admin: '管理员' }
+const users = ref([])
 
 const dialog = ref({
   visible: false,
   isEdit: false,
-  form: { username: '', phone: '', role: 'citizen' }
+  form: { username: '', phone: '', email: '', role_code: 'citizen' }
 })
+
+async function loadUsers() {
+  const res = await fetchUsers({ page: 1, page_size: 100 })
+  users.value = res.data.items
+}
 
 function editUser(row) {
   dialog.value = { visible: true, isEdit: true, form: { ...row } }
 }
 
-function deleteUser(row) {
-  ElMessageBox.confirm(`确定删除用户 ${row.username} 吗？`, '确认', { type: 'warning' }).then(() => {
-    users.value = users.value.filter(u => u.id !== row.id)
-    ElMessage.success('已删除')
+async function deleteUser(row) {
+  ElMessageBox.confirm('确定删除？', '确认', { type: 'warning' }).then(async () => {
+    await updateUser(row.id, { status: 'disabled' })
+    loadUsers(); ElMessage.success('已禁用')
   })
 }
 
 async function saveUser() {
-  await delay(300)
+  const f = dialog.value.form
   if (dialog.value.isEdit) {
-    const idx = users.value.findIndex(u => u.id === dialog.value.form.id)
-    if (idx > -1) users.value[idx] = { ...users.value[idx], ...dialog.value.form }
+    await updateUser(f.id, { phone: f.phone, email: f.email, role_code: f.role_code })
   } else {
-    users.value.push({ ...dialog.value.form, id: Date.now(), status: 'enabled', created_at: new Date().toISOString() })
+    await createUser({ username: f.username, phone: f.phone, email: f.email, role_code: f.role_code })
   }
-  dialog.value.visible = false
-  ElMessage.success('保存成功')
+  dialog.value.visible = false; loadUsers(); ElMessage.success('保存成功')
 }
 
 async function toggleStatus(row) {
-  await delay(200)
-  ElMessage.success(row.status === 'enabled' ? '已启用' : '已禁用')
+  const newStatus = row.status === 'active' ? 'disabled' : 'active'
+  await updateUser(row.id, { status: newStatus }); loadUsers()
 }
+
+onMounted(loadUsers)
 </script>
 
 <style scoped>

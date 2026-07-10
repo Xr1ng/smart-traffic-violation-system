@@ -97,7 +97,7 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getCases } from '@/api/case'
+import { fetchCases as getCases } from '@/api/case'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -147,7 +147,7 @@ async function fetchCases() {
       page: page.value,
       page_size: pageSize
     })
-    cases.value = res.data.list
+    cases.value = res.data.items
     total.value = res.data.total
     // 统计待审核数
     if (!filter.status || filter.status === 'pending_human_review') {

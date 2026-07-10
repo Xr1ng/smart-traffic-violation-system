@@ -47,7 +47,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { mockReports, pageOk, delay } from '@/api/mock'
+import { fetchCases } from '@/api/case'
 
 const router = useRouter()
 const list = ref([])
@@ -65,10 +65,11 @@ function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
 
 async function fetchList() {
   loading.value = true
-  await delay()
-  const start = (page.value - 1) * pageSize.value
-  list.value = mockReports.slice(start, start + pageSize.value)
-  total.value = mockReports.length
+  try {
+    const res = await fetchCases({ source_type: 'citizen', page: page.value, page_size: pageSize })
+    list.value = res.data.items
+    total.value = res.data.total
+  } catch {}
   loading.value = false
 }
 

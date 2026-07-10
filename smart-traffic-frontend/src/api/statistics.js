@@ -20,3 +20,4 @@ export const fetchOverview = (params) => request.get('/statistics/overview', { p
 export const fetchByLocation = (params) => request.get('/statistics/by-location', { params })
 export const fetchByType = (params) => request.get('/statistics/by-type', { params })
 export const fetchByTime = (params) => request.get('/statistics/by-time', { params })
+export const generateReport = (data) => request.post('/analysis/reports', data)

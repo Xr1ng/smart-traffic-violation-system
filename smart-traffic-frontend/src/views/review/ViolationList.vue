@@ -71,7 +71,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getViolations } from '@/api/violation'
+import { fetchViolations as getViolations } from '@/api/violation'
 import { ElMessage } from 'element-plus'
 
 const list = ref([])
@@ -90,7 +90,7 @@ async function fetchList() {
   loading.value = true
   try {
     const res = await getViolations({ ...filter, page: page.value, page_size: pageSize })
-    list.value = res.data.list
+    list.value = res.data.items
     total.value = res.data.total
   } catch { ElMessage.error('加载失败') }
   finally { loading.value = false }

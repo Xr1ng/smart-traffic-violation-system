@@ -45,13 +45,22 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { mockVehicles, ok, delay } from '@/api/mock'
+import { getVehicles, createVehicle } from '@/api/vehicle'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const bindRef = ref(null)
 const binding = ref(false)
-const vehicles = ref(mockVehicles.slice(0, 3))
+const vehicles = ref([])
+
+async function loadVehicles() {
+  const uid = JSON.parse(localStorage.getItem('userInfo') || '{}').id
+  if (uid) {
+    const res = await getVehicles({ page_size: 100 })
+    vehicles.value = (res.data.items || []).filter(v => v.owner_id === uid)
+  }
+}
+loadVehicles()
 const vehicleTypes = ['小型轿车', 'SUV', '货车', '摩托车', '新能源']
 
 const bindForm = reactive({ plate_no: '', vehicle_type: '小型轿车' })
@@ -65,14 +74,13 @@ async function handleBind() {
   const valid = await bindRef.value.validate().catch(() => false)
   if (!valid) return
   binding.value = true
-  await delay(500)
-  vehicles.value.push({
-    id: Date.now(),
-    plate_no: bindForm.plate_no,
-    vehicle_type: bindForm.vehicle_type,
-    color: '白',
-    created_at: new Date().toISOString()
-  })
+  try {
+    const uid = JSON.parse(localStorage.getItem('userInfo') || '{}').id
+    await createVehicle({ plate_no: bindForm.plate_no, vehicle_type: bindForm.vehicle_type, owner_id: uid, color: '白' })
+    ElMessage.success('绑定成功')
+    bindForm.plate_no = ''
+    loadVehicles()
+  } catch { ElMessage.error('绑定失败') }
   bindForm.plate_no = ''
   binding.value = false
   ElMessage.success('车辆绑定成功')

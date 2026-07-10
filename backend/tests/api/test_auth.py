@@ -62,3 +62,41 @@ def test_login_disabled_account(client, db, seeded_roles):
         json={"username": "disabled1", "password": "pass1234"},
     )
     assert response.status_code == 403
+
+
+def test_register_creates_user_and_returns_token(client, seeded_roles):
+    resp = client.post("/api/v1/auth/register",
+                       json={"username": "newuser", "password": "pass1234", "phone": "138", "email": "n@e.com"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["access_token"]
+    assert data["user"]["username"] == "newuser"
+    assert data["user"]["role_code"] == "citizen"
+
+
+def test_register_duplicate_username_409(client, citizen_user):
+    resp = client.post("/api/v1/auth/register",
+                       json={"username": "citizen1", "password": "x"})
+    assert resp.status_code == 409
+
+
+def test_update_profile(client, citizen_user, auth_headers):
+    resp = client.put("/api/v1/auth/profile", headers=auth_headers,
+                      json={"phone": "1390000", "email": "updated@e.com"})
+    assert resp.status_code == 200
+    assert resp.json()["username"] == "citizen1"
+
+
+def test_change_password(client, citizen_user, auth_headers):
+    resp = client.put("/api/v1/auth/password", headers=auth_headers,
+                      json={"old_password": "pass1234", "new_password": "newpass5678"})
+    assert resp.status_code == 200
+    # 用新密码能登录
+    r2 = client.post("/api/v1/auth/login", json={"username": "citizen1", "password": "newpass5678"})
+    assert r2.status_code == 200
+
+
+def test_change_password_wrong_old(client, citizen_user, auth_headers):
+    resp = client.put("/api/v1/auth/password", headers=auth_headers,
+                      json={"old_password": "wrong", "new_password": "x"})
+    assert resp.status_code == 400

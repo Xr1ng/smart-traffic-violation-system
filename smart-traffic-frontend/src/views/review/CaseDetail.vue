@@ -215,7 +215,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCaseDetail, approveCase, rejectCase } from '@/api/case'
+import { fetchCaseDetail as getCaseDetail, approveCase, rejectCase } from '@/api/case'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()

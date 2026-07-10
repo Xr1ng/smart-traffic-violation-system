@@ -53,26 +53,20 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { delay } from '@/api/mock'
+import { fetchAuditLogs } from '@/api/system'
 
 const page = ref(1)
 const pageSize = ref(15)
-const total = ref(30)
+const total = ref(0)
 const logs = ref([])
 
 const filter = reactive({ action: '', username: '' })
 const actionMap = { login: '登录', approve: '审核通过', reject: '审核驳回', upload: '上传图片', logout: '登出' }
 
-const mockLogs = [
-  { id: 1, username: 'admin', action: 'login', detail: '管理员登录系统', ip: '192.168.1.100', created_at: new Date(Date.now() - 60000).toISOString() },
-  { id: 2, username: 'reviewer', action: 'approve', detail: '审核通过案件 CASE000025，确认闯红灯违章', ip: '192.168.1.101', created_at: new Date(Date.now() - 300000).toISOString() },
-  { id: 3, username: 'reviewer', action: 'reject', detail: '驳回案件 CASE000028，图片模糊无法确认', ip: '192.168.1.101', created_at: new Date(Date.now() - 900000).toISOString() },
-  { id: 4, username: 'citizen', action: 'upload', detail: '上传随手拍举报，地点：中山大道天河路', ip: '192.168.1.200', created_at: new Date(Date.now() - 1800000).toISOString() },
-]
-
 async function fetchLogs() {
-  await delay()
-  logs.value = mockLogs
+  const res = await fetchAuditLogs({ page: page.value, page_size: pageSize, action: filter.action || undefined })
+  logs.value = res.data.items
+  total.value = res.data.total
 }
 
 fetchLogs()

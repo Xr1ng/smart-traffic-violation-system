@@ -40,7 +40,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { mockViolations, delay } from '@/api/mock'
+import { fetchOwnerViolations } from '@/api/violation'
 
 const list = ref([])
 const loading = ref(false)
@@ -52,11 +52,14 @@ function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
 
 async function fetchList() {
   loading.value = true
-  await delay()
-  const start = (page.value - 1) * pageSize.value
-  const filtered = mockViolations.slice(0, 5)
-  list.value = filtered.slice(start, start + pageSize.value)
-  total.value = filtered.length
+  try {
+    const uid = JSON.parse(localStorage.getItem('userInfo') || '{}').id
+    if (uid) {
+      const res = await fetchOwnerViolations(uid)
+      list.value = res.data.items
+      total.value = res.data.total
+    }
+  } catch {}
   loading.value = false
 }
 
