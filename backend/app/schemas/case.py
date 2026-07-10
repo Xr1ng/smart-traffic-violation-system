@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 
 class CaseListItem(BaseModel):
+    id: int
     case_no: str
     status: str
     source_type: str | None = None
@@ -24,14 +25,18 @@ class CaseDetail(BaseModel):
     case_no: str
     status: str
     source_type: str | None = None
+    source_desc: str = ""
+    location_text: str | None = None
+    captured_at: str | None = None
+    speed: float | None = None
     plate_no: str | None = None
     violation_type: str | None = None
-    intake_event: dict
-    media: list[dict]
-    ai_detection_result: dict | None = None
-    violation_rule_result: dict | None = None
-    ai_review_result: dict | None = None
-    review: dict
+    media: dict = {}
+    detection_result: dict | None = None
+    rule_result: dict | None = None
+    ai_review: dict | None = None
+    review: dict = {}
+    model_config = {"from_attributes": True}
 
 
 class ApproveRequest(BaseModel):

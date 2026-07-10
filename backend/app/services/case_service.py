@@ -57,18 +57,30 @@ class CaseService:
             ev is not None and ev.source_type == "citizen" and ev.source_id == user.id
         ):
             raise HTTPException(status_code=403, detail="无权查看该案件")
-        media = [{"asset_type": m.asset_type, "url": m.url} for m in (ev.media_assets if ev else [])]
+        media_list = [{"asset_type": m.asset_type, "url": m.url} for m in (ev.media_assets if ev else [])]
+        # 前端期望 { original_url, annotated_url, cropped_plate_url } 扁平对象
+        media = {}
+        for m in media_list:
+            key = f"{m['asset_type']}_url"
+            media[key] = m["url"]
+            media.setdefault("original_url", m["url"] if m["asset_type"] == "original" else None)
+        # 前端扁平字段（从 intake_event 提取到顶层）
+        location_text = ev.location_text if ev else None
+        captured_at = str(ev.captured_at) if ev and ev.captured_at else None
+        speed = ev.speed if ev else None
+        source_desc_map = {"citizen": "市民举报", "camera": "摄像头抓拍", "admin": "后台上传"}
         return {
             "id": case.id, "case_no": case.case_no, "status": case.status,
             "source_type": ev.source_type if ev else None,
+            "source_desc": source_desc_map.get(ev.source_type, "") if ev else "",
+            "location_text": location_text,
+            "captured_at": captured_at,
+            "speed": speed,
             "plate_no": case.plate_no, "violation_type": case.violation_type,
-            "intake_event": {"location_text": ev.location_text if ev else None,
-                             "captured_at": str(ev.captured_at) if ev and ev.captured_at else None,
-                             "speed": ev.speed if ev else None},
             "media": media,
-            "ai_detection_result": None,
-            "violation_rule_result": None,
-            "ai_review_result": None,
+            "detection_result": None,
+            "rule_result": None,
+            "ai_review": None,
             "review": {"reviewer_id": case.reviewer_id, "review_opinion": case.review_opinion,
                        "reviewed_at": str(case.reviewed_at) if case.reviewed_at else None},
         }

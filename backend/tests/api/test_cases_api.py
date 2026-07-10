@@ -11,7 +11,7 @@ def test_list_cases_reviewer(client, reviewer_user, pending_case, reviewer_auth_
 def test_case_detail_reviewer(client, reviewer_user, pending_case, reviewer_auth_headers):
     r = client.get(f"/api/v1/cases/{pending_case.id}", headers=reviewer_auth_headers)
     assert r.status_code == 200
-    assert r.json()["ai_detection_result"] is None
+    assert r.json()["detection_result"] is None
 
 
 def test_approve_endpoint(client, reviewer_user, citizen_user, pending_case, reviewer_auth_headers, tmp_path, monkeypatch):
