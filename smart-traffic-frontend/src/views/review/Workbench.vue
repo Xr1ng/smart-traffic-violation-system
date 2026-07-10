@@ -145,7 +145,7 @@ async function fetchCases() {
       source_type: filter.source_type,
       keyword: filter.keyword,
       page: page.value,
-      page_size: pageSize
+      page_size: pageSize.value
     })
     cases.value = res.data.list
     total.value = res.data.total
@@ -154,7 +154,7 @@ async function fetchCases() {
       const pendingRes = await getCases({ status: 'pending_human_review', page: 1, page_size: 1 })
       pendingTotal.value = pendingRes.data.total
     }
-  } catch { ElMessage.error('加载案件失败') }
+  } catch (e) { console.error('[Workbench] fetchCases failed', e); ElMessage.error('加载案件失败') }
   finally { loading.value = false }
 }
 

@@ -89,7 +89,7 @@ function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
 async function fetchList() {
   loading.value = true
   try {
-    const res = await getViolations({ ...filter, page: page.value, page_size: pageSize })
+    const res = await getViolations({ ...filter, page: page.value, page_size: pageSize.value })
     list.value = res.data.list
     total.value = res.data.total
   } catch { ElMessage.error('加载失败') }

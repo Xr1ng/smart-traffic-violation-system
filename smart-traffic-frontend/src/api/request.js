@@ -40,7 +40,8 @@ request.interceptors.response.use(
           ElMessage.error('服务器错误，请稍后重试')
           break
         default:
-          ElMessage.error(error.response.data?.message || '请求失败')
+          console.error('[API Error]', error.response?.status, error.response?.data)
+          ElMessage.error(error.response?.data?.detail || error.response?.data?.message || '请求失败')
       }
     } else {
       ElMessage.error('网络连接失败')
