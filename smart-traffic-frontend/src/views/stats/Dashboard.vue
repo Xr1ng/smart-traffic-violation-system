@@ -54,7 +54,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { getOverview, getTrend, getTypeRatio, getRegionRank } from '@/api/statistics'
+import { fetchOverview, fetchByTime, fetchByType, fetchByLocation } from '@/api/statistics'
 import * as echarts from 'echarts'
 
 const router = useRouter()
@@ -68,26 +68,37 @@ const trend = ref([])
 const typeRatio = ref([])
 const regionRank = ref([])
 
-const overviewCards = computed(() => [
-  { label: '总案件数', value: overview.value.total_cases, color: '#409eff' },
-  { label: '正式违章', value: overview.value.total_violations, color: '#e6a23c' },
-  { label: '通过率', value: overview.value.approve_rate + '%', color: '#67c23a' },
-  { label: '驳回率', value: overview.value.reject_rate + '%', color: '#f56c6c' },
-  { label: '待审核', value: overview.value.pending_count, color: '#e6a23c' },
-  { label: '今日新增', value: overview.value.today_new, color: '#909399' }
-])
+const overviewCards = computed(() => {
+  const d = overview.value || {}
+  const total = d.total_cases || 0
+  const approved = d.approved_count || 0
+  const rejected = d.rejected_count || 0
+  return [
+    { label: '总案件数', value: total, color: '#409eff' },
+    { label: '已通过', value: approved, color: '#67c23a' },
+    { label: '已驳回', value: rejected, color: '#f56c6c' },
+    { label: '通过率', value: (d.approval_rate != null ? (d.approval_rate * 100).toFixed(1) + '%' : 'N/A'), color: '#409eff' },
+    { label: '待审核', value: d.pending_count || 0, color: '#e6a23c' },
+    { label: '数据时段', value: d.period ? d.period.start?.slice(0, 10) + '~' + d.period.end?.slice(0, 10) : '全部', color: '#909399' }
+  ]
+})
 
 async function loadData() {
+  const params = {}
+  if (dateRange.value && dateRange.value.length === 2) {
+    params.start_time = dateRange.value[0]
+    params.end_time = dateRange.value[1]
+  }
   const [ov, tr, ty, rg] = await Promise.all([
-    getOverview(),
-    getTrend(),
-    getTypeRatio(),
-    getRegionRank()
+    fetchOverview(params),
+    fetchByTime(params),
+    fetchByType(params),
+    fetchByLocation(params)
   ])
   overview.value = ov.data
-  trend.value = tr.data
-  typeRatio.value = ty.data
-  regionRank.value = rg.data
+  trend.value = (tr.data || []).map(t => ({ date: t.date, count: t.count }))
+  typeRatio.value = (ty.data || []).map(t => ({ name: t.violation_type, value: t.count }))
+  regionRank.value = (rg.data || []).map(r => ({ name: r.location_text, value: r.count }))
 }
 
 function renderTrend() {
