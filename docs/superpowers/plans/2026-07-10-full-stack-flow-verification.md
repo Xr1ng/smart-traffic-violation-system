@@ -295,7 +295,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   buildApprovePayload, buildRejectPayload, buildViolationQuery,
-  getStatisticsCards, mapNamedSeries, reportPathForRoute
+  caseAiFallbackText, getStatisticsCards, mapNamedSeries, reportPathForRoute
 } from '../src/utils/contracts.js'
 
 test('maps backend statistics fields without multiplying percentages', () => {
@@ -328,6 +328,13 @@ test('keeps admin report navigation inside admin routes', () => {
   assert.equal(reportPathForRoute('/admin/stats'), '/admin/stats/report')
   assert.equal(reportPathForRoute('/stats'), '/stats/report')
 })
+
+test('shows AI processing only for active AI pipeline states', () => {
+  assert.equal(caseAiFallbackText('detecting'), 'AI 处理中...')
+  assert.equal(caseAiFallbackText('ai_reviewing'), 'AI 处理中...')
+  assert.equal(caseAiFallbackText('notified'), '暂无 AI 结果')
+  assert.equal(caseAiFallbackText('uploaded'), '暂无 AI 结果')
+})
 ```
 
 - [ ] **Step 2: 运行红灯测试**
@@ -343,6 +350,8 @@ Expected: `src/utils/contracts.js` 不存在，测试失败。
 `Report.vue` 展示后端 `title/content/author/generated_at`，使用 `white-space: pre-wrap`，删除不存在的 `summary/highlights/suggestions` 读取。
 
 `CaseDetail.vue` 使用 `buildApprovePayload` 和 `buildRejectPayload`；`statusType` 默认返回 `info`，并明确 `notified: success`，消除 `ElTag type=""` 警告。
+
+`Workbench.vue` 使用 `caseAiFallbackText`，终态/上传态不再错误显示“AI 处理中”；筛选项区分 `uploaded` 待初审、`pending_human_review` 待终审、`notified` 已通知、`rejected` 已驳回，待审核总数由 uploaded 与 pending_human_review 两个轻量计数请求相加。
 
 `ViolationList.vue` 与 `AdvancedSearch.vue` 使用 `buildViolationQuery`；表格字段改为 `plate_no/location_text/occurred_at`，管理员审核按钮导航 `/review/case/${row.case_id}`；删除后端不支持的驾驶员筛选。
 
