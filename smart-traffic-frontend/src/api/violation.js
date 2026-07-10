@@ -38,11 +38,6 @@ export const getOwnerViolations = async (ownerId, params = {}) => {
   return pageOk(filtered, filtered.length, page, page_size)
 }
 
-export const exportExcel = async (params) => {
-  await delay()
-  return ok({ message: '导出成功' })
-}
-
 export const submitReport = async (data) => {
   await delay(500)
   return ok({

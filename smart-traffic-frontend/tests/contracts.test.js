@@ -240,9 +240,12 @@ test('does not fabricate citizen announcements without a backend API', async () 
 
 test('reviewer violations use the shared query contract without duplicate errors or fake exports', async () => {
   const source = await readFile(new URL('../src/views/review/ViolationList.vue', import.meta.url), 'utf8')
+  const apiSource = await readFile(new URL('../src/api/violation.js', import.meta.url), 'utf8')
 
   assert.match(source, /buildViolationQuery\(filter, page\.value, pageSize\.value\)/)
   assert.doesNotMatch(source, /导出 Excel|handleExport|ElMessage/)
+  assert.doesNotMatch(source, /prop="owner_name"|label="车主"/)
+  assert.doesNotMatch(apiSource, /exportExcel|导出成功/)
 })
 
 test('admin vehicles expose only backend vehicle fields and supported actions', async () => {

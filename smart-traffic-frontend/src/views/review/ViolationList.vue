@@ -52,7 +52,6 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="owner_name" label="车主" width="80" />
       </el-table>
 
       <div style="padding:16px 0 0;text-align:right">
