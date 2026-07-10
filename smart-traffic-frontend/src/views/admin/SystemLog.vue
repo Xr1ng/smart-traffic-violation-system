@@ -48,7 +48,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getLogs } from '@/api/system'
+import { fetchAuditLogs } from '@/api/system'
 
 const list = ref([])
 const loading = ref(false)
@@ -61,12 +61,8 @@ async function fetchList() {
   loading.value = true
   try {
     const params = { page: page.value, page_size: pageSize.value }
-    if (search.type) params.type = search.type
-    if (search.dateRange) {
-      params.start_date = search.dateRange[0]
-      params.end_date = search.dateRange[1]
-    }
-    const res = await getLogs(params)
+    if (search.type) params.action = search.type
+    const res = await fetchAuditLogs(params)
     list.value = res.data?.items || []
     total.value = res.data?.total || 0
   } catch { /* handled */ }
