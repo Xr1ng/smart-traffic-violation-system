@@ -64,14 +64,36 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { fetchCases } from '@/api/case'
+import { fetchOwnerViolations } from '@/api/violation'
+import { getMyVehicles } from '@/api/vehicle'
+import { useUserStore } from '@/stores/user'
+import { summarizeCitizenOverview } from '@/utils/contracts'
 
 const router = useRouter()
+const userStore = useUserStore()
 const announcements = ref([
   { id: 1, title: '系统升级通知', content: '系统将于 7 月 15 日进行升级维护，届时部分功能暂停使用。', created_at: '2026-07-05' }
 ])
-const stats = reactive({ violations: 2, reports: 5, rewards: 80, vehicles: 2 })
+const stats = reactive(summarizeCitizenOverview())
+
+async function loadOverview() {
+  const ownerId = userStore.userInfo?.id ?? JSON.parse(localStorage.getItem('userInfo') || '{}').id
+  if (!ownerId) return
+
+  try {
+    const [violations, cases, vehicles] = await Promise.all([
+      fetchOwnerViolations(ownerId),
+      fetchCases({ source_type: 'citizen', page: 1, page_size: 100 }),
+      getMyVehicles()
+    ])
+    Object.assign(stats, summarizeCitizenOverview(violations.data, cases.data, vehicles.data))
+  } catch {}
+}
+
+onMounted(loadOverview)
 </script>
 
 <style scoped>

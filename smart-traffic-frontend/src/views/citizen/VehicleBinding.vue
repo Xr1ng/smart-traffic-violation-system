@@ -45,7 +45,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getVehicles, createVehicle } from '@/api/vehicle'
+import { bindMyVehicle, getMyVehicles, unbindMyVehicle } from '@/api/vehicle'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
@@ -54,13 +54,10 @@ const binding = ref(false)
 const vehicles = ref([])
 
 async function loadVehicles() {
-  const uid = JSON.parse(localStorage.getItem('userInfo') || '{}').id
-  if (uid) {
-    const res = await getVehicles({ page_size: 100 })
-    vehicles.value = (res.data.items || []).filter(v => v.owner_id === uid)
-  }
+  const res = await getMyVehicles()
+  vehicles.value = res.data.items || []
 }
-loadVehicles()
+loadVehicles().catch(() => {})
 const vehicleTypes = ['小型轿车', 'SUV', '货车', '摩托车', '新能源']
 
 const bindForm = reactive({ plate_no: '', vehicle_type: '小型轿车' })
@@ -75,21 +72,23 @@ async function handleBind() {
   if (!valid) return
   binding.value = true
   try {
-    const uid = JSON.parse(localStorage.getItem('userInfo') || '{}').id
-    await createVehicle({ plate_no: bindForm.plate_no, vehicle_type: bindForm.vehicle_type, owner_id: uid, color: '白' })
+    await bindMyVehicle({ plate_no: bindForm.plate_no, vehicle_type: bindForm.vehicle_type })
     ElMessage.success('绑定成功')
     bindForm.plate_no = ''
-    loadVehicles()
-  } catch { ElMessage.error('绑定失败') }
-  bindForm.plate_no = ''
-  binding.value = false
-  ElMessage.success('车辆绑定成功')
+    await loadVehicles()
+  } catch {}
+  finally { binding.value = false }
 }
 
 async function handleUnbind(row) {
-  await ElMessageBox.confirm(`确定要解绑车辆 ${row.plate_no} 吗？`, '确认', { type: 'warning' })
-  vehicles.value = vehicles.value.filter(v => v.id !== row.id)
-  ElMessage.success('已解绑')
+  try {
+    await ElMessageBox.confirm(`确定要解绑车辆 ${row.plate_no} 吗？`, '确认', { type: 'warning' })
+    await unbindMyVehicle(row.id)
+    await loadVehicles()
+    ElMessage.success('已解绑')
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+  }
 }
 
 function viewViolations(plateNo) {

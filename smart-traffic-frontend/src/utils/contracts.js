@@ -57,3 +57,12 @@ export function isApprovedCaseStatus(status) {
 export function getCaseReviewOpinion(detail = {}) {
   return detail.review?.review_opinion ?? ''
 }
+
+export function summarizeCitizenOverview(violations = {}, cases = {}, vehicles = {}) {
+  return {
+    violations: violations.total ?? 0,
+    reports: cases.total ?? 0,
+    rewards: (cases.items ?? []).reduce((total, item) => total + (item?.reward ?? 0), 0),
+    vehicles: vehicles.total ?? 0
+  }
+}

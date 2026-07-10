@@ -9,3 +9,7 @@ export const updateVehicle = (id, data) => request.patch(`/admin/vehicles/${id}`
 export const deleteVehicle = (_id) => Promise.reject(new Error('暂不支持删除'))
 // 后端无车主历史
 export const getVehicleOwners = (_id) => Promise.reject(new Error('暂不支持'))
+
+export const getMyVehicles = () => request.get('/vehicles/me')
+export const bindMyVehicle = (data) => request.post('/vehicles/me', data)
+export const unbindMyVehicle = (id) => request.delete(`/vehicles/me/${id}`)

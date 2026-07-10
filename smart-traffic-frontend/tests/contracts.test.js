@@ -9,7 +9,8 @@ import {
   getStatisticsCards,
   isApprovedCaseStatus,
   mapNamedSeries,
-  reportPathForRoute
+  reportPathForRoute,
+  summarizeCitizenOverview
 } from '../src/utils/contracts.js'
 
 test('maps backend statistics fields without multiplying percentages', () => {
@@ -92,4 +93,12 @@ test('maps notified cases and nested review results to the approved terminal vie
     '证据清晰'
   )
   assert.equal(getCaseReviewOpinion({}), '')
+})
+
+test('summarizes citizen overview from real API payloads', () => {
+  assert.deepEqual(summarizeCitizenOverview(
+    { total: 2 },
+    { total: 3, items: [{ reward: 10 }, { reward: null }, { reward: 5 }] },
+    { total: 1 }
+  ), { violations: 2, reports: 3, rewards: 15, vehicles: 1 })
 })
