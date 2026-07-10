@@ -5,13 +5,12 @@ from pydantic import BaseModel
 
 class AuditLogOut(BaseModel):
     id: int
-    user_id: int | None
-    username: str | None
+    actor_id: int | None = None
     action: str
-    target_type: str | None
-    target_id: int | None
-    detail: str | None
-    ip_address: str | None
+    target_type: str | None = None
+    target_id: int | None = None
+    detail: str | None = None
+    ip: str | None = None
     created_at: datetime
     model_config = {"from_attributes": True}
 

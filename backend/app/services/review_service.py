@@ -23,7 +23,9 @@ class ReviewService:
     def approve(self, case_id: int, user: User, *, plate_no: str, violation_type: str,
                 fine_amount: int, points: int, review_opinion: str) -> dict:
         case = self.db.get(Case, case_id)
-        if case is None or case.status != "pending_human_review":
+        if case is None:
+            raise HTTPException(status_code=404, detail="案件不存在")
+        if case.status != "pending_human_review":
             raise HTTPException(status_code=409, detail="案件不在待审核状态")
         if not plate_no:
             raise HTTPException(status_code=400, detail="需提供车牌号")
@@ -59,7 +61,9 @@ class ReviewService:
 
     def reject(self, case_id: int, user: User, *, reject_reason: str) -> dict:
         case = self.db.get(Case, case_id)
-        if case is None or case.status != "pending_human_review":
+        if case is None:
+            raise HTTPException(status_code=404, detail="案件不存在")
+        if case.status != "pending_human_review":
             raise HTTPException(status_code=409, detail="案件不在待审核状态")
         case.status = "rejected"
         case.reviewer_id = user.id
@@ -71,7 +75,9 @@ class ReviewService:
 
     def request_recheck(self, case_id: int, user: User) -> dict:
         case = self.db.get(Case, case_id)
-        if case is None or case.status != "pending_human_review":
+        if case is None:
+            raise HTTPException(status_code=404, detail="案件不存在")
+        if case.status != "pending_human_review":
             raise HTTPException(status_code=409, detail="案件不在待审核状态")
         self._audit(user, "request_recheck", "case", case.id, "请求重新 AI 初审")
         self.db.commit()

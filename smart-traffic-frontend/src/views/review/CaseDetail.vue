@@ -250,8 +250,8 @@ const objLabelMap = { vehicle: '车辆', stop_line: '停止线', red_light: '红
 
 function statusText(s) { return statusMap[s] || s }
 function statusType(s) {
-  const m = { pending_human_review: 'danger', approved: 'success', rejected: 'info', uploaded: 'info', detecting: 'warning', ai_reviewing: 'warning' }
-  return m[s] || ''
+  const m = { pending_human_review: 'danger', approved: 'success', rejected: 'info', uploaded: 'info', detecting: 'warning', ai_reviewing: 'warning', archived: 'info', notified: 'success' }
+  return m[s] || 'info'
 }
 function sourceIcon(s) { return s === 'citizen' ? '📱' : s === 'camera' ? '📷' : '👤' }
 function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
@@ -268,7 +268,7 @@ async function fetchDetail() {
     // 填充审核表单默认值
     reviewForm.plate_no = detail.value.plate_no || ''
     reviewForm.violation_type = detail.value.rule_result?.candidate_violation_type || ''
-  } catch { ElMessage.error('加载案件失败') }
+  } catch (e) { console.error('[CaseDetail] fetch failed', e); ElMessage.error('加载案件失败') }
   finally { loading.value = false }
 }
 

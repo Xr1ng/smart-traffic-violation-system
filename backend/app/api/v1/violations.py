@@ -1,4 +1,6 @@
 # app/api/v1/violations.py
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -13,12 +15,17 @@ router = APIRouter(tags=["violations"])
 
 @router.get("/violations", response_model=ViolationListResponse)
 def list_violations(plate_no: str | None = None, violation_type: str | None = None,
-                    status: str | None = None, page: int = Query(1, ge=1),
+                    status: str | None = None,
+                    start_time: datetime | None = None, end_time: datetime | None = None,
+                    location_text: str | None = None,
+                    page: int = Query(1, ge=1),
                     page_size: int = Query(20, ge=1, le=100),
                     db: Session = Depends(get_db),
                     user: User = Depends(require_role("reviewer", "admin"))) -> ViolationListResponse:
     res = ViolationService(db).list_violations(
-        plate_no=plate_no, violation_type=violation_type, status=status, page=page, page_size=page_size)
+        plate_no=plate_no, violation_type=violation_type, status=status,
+        start_time=start_time, end_time=end_time, location_text=location_text,
+        page=page, page_size=page_size)
     return ViolationListResponse(items=[ViolationOut.model_validate(v) for v in res["items"]],
                                  total=res["total"], page=res["page"], page_size=res["page_size"])
 
@@ -33,10 +40,12 @@ def get_violation(violation_id: int, db: Session = Depends(get_db),
 
 
 @router.get("/owners/{owner_id}/violations", response_model=ViolationListResponse)
-def owner_violations(owner_id: int, db: Session = Depends(get_db),
+def owner_violations(owner_id: int, page: int = Query(1, ge=1),
+                     page_size: int = Query(20, ge=1, le=100),
+                     db: Session = Depends(get_db),
                      user: User = Depends(get_current_user)) -> ViolationListResponse:
     if user.role.code == "citizen" and user.id != owner_id:
         raise HTTPException(status_code=403, detail="无权查看他人违章")
-    items = ViolationService(db).list_by_owner(owner_id)
-    return ViolationListResponse(items=[ViolationOut.model_validate(v) for v in items],
-                                 total=len(items), page=1, page_size=len(items))
+    res = ViolationService(db).list_by_owner(owner_id, page=page, page_size=page_size)
+    return ViolationListResponse(items=[ViolationOut.model_validate(v) for v in res["items"]],
+                                 total=res["total"], page=res["page"], page_size=res["page_size"])

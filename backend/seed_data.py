@@ -47,6 +47,11 @@ def seed_demo_data(db: Session) -> None:
         db.flush()
         db.add(Vehicle(plate_no="粤A12345", owner_id=owner.id, vehicle_type="小汽车", color="白"))
         db.add(Vehicle(plate_no="粤B67890", owner_id=owner.id, vehicle_type="小汽车", color="黑"))
+    # 演示审核员
+    reviewer_role = db.query(Role).filter_by(code="reviewer").first()
+    if reviewer_role and not db.query(User).filter_by(username="reviewer").first():
+        db.add(User(username="reviewer", password_hash=hash_password("reviewer123"),
+                    email="reviewer@example.com", role_id=reviewer_role.id))
     db.commit()
 
 

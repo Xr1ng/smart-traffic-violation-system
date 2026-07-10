@@ -97,10 +97,9 @@ async function handleSubmit() {
   submitting.value = true
   try {
     const fd = new FormData()
-    fd.append('location', form.location)
-    fd.append('violation_time', form.violation_time)
-    fd.append('description', form.description)
-    fileList.value.forEach(f => fd.append('images', f.raw))
+    fd.append('location_text', form.location)
+    if (form.violation_time) fd.append('captured_at', form.violation_time)
+    if (fileList.value.length > 0) fd.append('image', fileList.value[0].raw)
 
     await submitReport(fd)
     ElMessage.success('举报提交成功，请等待审核')

@@ -16,10 +16,10 @@ export const useUserStore = defineStore('user', () => {
 
   async function login(credentials) {
     const res = await loginApi(credentials)
-    // v2.0 响应: { access_token, token_type, user: { id, username, role } }
+    // 后端响应: { access_token, user: { id, username, role_code } }
     const data = res.data
     token.value = data.access_token || data.token
-    role.value = data.user?.role || data.role
+    role.value = data.user?.role_code || data.role_code
     userInfo.value = data.user || data
     localStorage.setItem('token', token.value)
     localStorage.setItem('role', role.value)
@@ -28,20 +28,11 @@ export const useUserStore = defineStore('user', () => {
 
   async function restoreLoginState() {
     if (!token.value) return
-    // 优先使用本地缓存，避免 mock 开发模式下请求后端
-    const cachedUserInfo = localStorage.getItem('userInfo')
-    if (cachedUserInfo) {
-      try {
-        userInfo.value = JSON.parse(cachedUserInfo)
-        role.value = userInfo.value.role || localStorage.getItem('role') || ''
-        return
-      } catch { /* ignore */ }
-    }
     try {
       const res = await getUserInfo()
       userInfo.value = res.data
-      role.value = res.data.role
-      localStorage.setItem('role', res.data.role)
+      role.value = res.data.role_code
+      localStorage.setItem('role', res.data.role_code)
       localStorage.setItem('userInfo', JSON.stringify(res.data))
     } catch {
       logout()

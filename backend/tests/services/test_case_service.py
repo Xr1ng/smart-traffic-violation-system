@@ -32,9 +32,9 @@ def test_get_case_detail_ai_fields_null(db, citizen_user, pending_case):
     svc = CaseService(db)
     d = svc.get_case_detail(pending_case.id, user=citizen_user)
     assert d["case_no"] == "CASE-PEND-1"
-    assert d["ai_detection_result"] is None
-    assert d["violation_rule_result"] is None
-    assert d["ai_review_result"] is None
+    assert d["detection_result"] is None
+    assert d["rule_result"] is None
+    assert d["ai_review"] is None
 
 
 def test_get_case_detail_reviewer_can_read(db, reviewer_user, pending_case):

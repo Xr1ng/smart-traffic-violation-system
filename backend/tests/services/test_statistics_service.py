@@ -35,10 +35,9 @@ def test_overview_counts(db):
     _seed_case(db, status="pending_human_review", created_at=t, case_no="C3")
     out = StatisticsService(db).overview(*WIN)
     assert out.total_cases == 3
-    assert out.approved_count == 1
-    assert out.rejected_count == 1
+    assert out.approve_rate == round(1 / 3 * 100, 1)
+    assert out.reject_rate == round(1 / 3 * 100, 1)
     assert out.pending_count == 1
-    assert out.approval_rate == round(1 / 3 * 100, 1)
 
 
 def test_by_location_orders_desc_and_limit(db):
@@ -48,8 +47,8 @@ def test_by_location_orders_desc_and_limit(db):
     _seed_violation(db, case=c, violation_type="超速", location_text="路口A", created_at=t, vio_no="V2")
     _seed_violation(db, case=c, violation_type="超速", location_text="路口B", created_at=t, vio_no="V3")
     out = StatisticsService(db).by_location(*WIN, limit=10)
-    assert out.items[0].location_text == "路口A"
-    assert out.items[0].count == 2
+    assert out.items[0].name == "路口A"
+    assert out.items[0].value == 2
     out_limit1 = StatisticsService(db).by_location(*WIN, limit=1)
     assert len(out_limit1.items) == 1
 
@@ -62,8 +61,8 @@ def test_by_type_percentage(db):
     _seed_violation(db, case=c, violation_type="违停", location_text="A", created_at=t, vio_no="V3")
     out = StatisticsService(db).by_type(*WIN)
     assert len(out.items) == 2
-    super_item = next(i for i in out.items if i.violation_type == "超速")
-    assert super_item.count == 2
+    super_item = next(i for i in out.items if i.name == "超速")
+    assert super_item.value == 2
     assert super_item.percentage == round(2 / 3 * 100, 1)
 
 
@@ -87,10 +86,8 @@ def test_overview_time_window_excludes_outside(db):
     t2 = datetime(2026, 7, 10, 10, 0, tzinfo=timezone.utc)
     _seed_case(db, status="approved", created_at=t1, case_no="C1")
     _seed_case(db, status="approved", created_at=t2, case_no="C2")
-    # 窄窗只含 t2
     out = StatisticsService(db).overview("2026-07-09T00:00:00", "2026-07-11T00:00:00")
     assert out.total_cases == 1
-    assert out.approved_count == 1
 
 
 def test_by_type_time_window_excludes_outside(db):
@@ -101,4 +98,4 @@ def test_by_type_time_window_excludes_outside(db):
     _seed_violation(db, case=c, violation_type="超速", location_text="A", created_at=t2, vio_no="V2")
     out = StatisticsService(db).by_type("2026-07-09T00:00:00", "2026-07-11T00:00:00")
     assert len(out.items) == 1
-    assert out.items[0].count == 1
+    assert out.items[0].value == 1

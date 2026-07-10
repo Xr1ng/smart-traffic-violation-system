@@ -4,17 +4,11 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.intake import Case
+from app.models.intake import Case, IntakeEvent
 from app.models.violation import Violation
 from app.schemas.statistics import (
-    ByLocationItem,
-    ByLocationOut,
-    ByTimeItem,
-    ByTimeOut,
-    ByTypeItem,
-    ByTypeOut,
-    OverviewOut,
-    PeriodOut,
+    ByLocationItem, ByLocationOut, ByTimeItem, ByTimeOut,
+    ByTypeItem, ByTypeOut, OverviewOut,
 )
 
 DEFAULT_START = datetime(2000, 1, 1, tzinfo=timezone.utc)
@@ -40,16 +34,20 @@ class StatisticsService:
     def overview(self, start_time: str | None, end_time: str | None) -> OverviewOut:
         st = _parse(start_time, DEFAULT_START)
         et = _end(end_time)
-        base = self.db.query(Case).filter(Case.created_at.between(st, et))
-        total = base.count()
-        approved = base.filter(Case.status == "approved").count()
-        rejected = base.filter(Case.status == "rejected").count()
+        case_base = self.db.query(Case).filter(Case.created_at.between(st, et))
+        total_cases = case_base.count()
+        total_violations = self.db.query(Violation).filter(Violation.created_at.between(st, et)).count()
+        approved = case_base.filter(Case.status.in_(["approved", "notified", "archived"])).count()
+        rejected = case_base.filter(Case.status == "rejected").count()
         pending = self.db.query(Case).filter(Case.status == "pending_human_review").count()
-        approval_rate = round(approved / total * 100, 1) if total > 0 else 0.0
+        approve_rate = round(approved / total_cases * 100, 1) if total_cases > 0 else 0.0
+        reject_rate = round(rejected / total_cases * 100, 1) if total_cases > 0 else 0.0
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_new = self.db.query(Case).filter(Case.created_at >= today_start).count()
         return OverviewOut(
-            total_cases=total, approved_count=approved, rejected_count=rejected,
-            pending_count=pending, approval_rate=approval_rate,
-            period=PeriodOut(start=st.isoformat(), end=et.isoformat()),
+            total_cases=total_cases, total_violations=total_violations,
+            approve_rate=approve_rate, reject_rate=reject_rate,
+            pending_count=pending, today_new=today_new,
         )
 
     def by_location(self, start_time: str | None, end_time: str | None, limit: int) -> ByLocationOut:
@@ -64,7 +62,7 @@ class StatisticsService:
             .all()
         )
         return ByLocationOut(
-            items=[ByLocationItem(location_text=r[0], count=r[1]) for r in rows]
+            items=[ByLocationItem(name=r[0], value=r[1]) for r in rows]
         )
 
     def by_type(self, start_time: str | None, end_time: str | None) -> ByTypeOut:
@@ -78,7 +76,7 @@ class StatisticsService:
             .all()
         )
         return ByTypeOut(items=[
-            ByTypeItem(violation_type=r[0], count=r[1],
+            ByTypeItem(name=r[0], value=r[1],
                        percentage=round(r[1] / total * 100, 1) if total > 0 else 0.0)
             for r in rows
         ])

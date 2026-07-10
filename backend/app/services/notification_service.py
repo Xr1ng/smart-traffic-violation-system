@@ -51,6 +51,5 @@ class NotificationService:
         )
         self.db.add(n)
         self.db.flush()
-        self.db.commit()
         self.db.refresh(n)
         return n

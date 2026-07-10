@@ -84,11 +84,8 @@ async function handleSubmit() {
   submitting.value = true
   try {
     const fd = new FormData()
-    fd.append('source_type', form.source_type)
     fd.append('location_text', form.location_text)
-    fd.append('captured_at', form.captured_at)
-    if (form.speed) fd.append('speed', form.speed)
-    fileList.value.forEach(f => fd.append('images', f.raw))
+    if (fileList.value.length > 0) fd.append('image', fileList.value[0].raw)
     await adminUpload(fd)
     ElMessage.success('上传成功，已投递 AI 识别任务')
     router.push('/review/workbench')

@@ -1,4 +1,6 @@
 # app/api/v1/cases.py
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -9,7 +11,7 @@ from app.schemas.case import (
     ApproveRequest, CaseDetail, CaseListResponse, CaseListItem, RejectRequest, RecheckResponse,
 )
 from app.services.case_service import CaseService
-from app.services.notification_provider import NotificationProvider
+from app.services.notification_provider import EmailSmtpProvider, NotificationProvider
 from app.services.review_service import ReviewService
 
 router = APIRouter(prefix="/cases", tags=["cases"])
@@ -18,17 +20,19 @@ router = APIRouter(prefix="/cases", tags=["cases"])
 @router.get("", response_model=CaseListResponse)
 def list_cases(status: str | None = None, source_type: str | None = None,
                location_text: str | None = None, plate_no: str | None = None,
+               start_time: datetime | None = None, end_time: datetime | None = None,
                page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100),
                db: Session = Depends(get_db),
                user: User = Depends(require_role("citizen", "reviewer", "admin"))) -> CaseListResponse:
     res = CaseService(db).list_cases(
         user=user, status=status, source_type=source_type,
-        location_text=location_text, plate_no=plate_no, page=page, page_size=page_size)
+        location_text=location_text, plate_no=plate_no,
+        start_time=start_time, end_time=end_time, page=page, page_size=page_size)
     items = []
     for c in res["items"]:
         ev = c.intake_event
         items.append(CaseListItem(
-            case_no=c.case_no, status=c.status,
+            id=c.id, case_no=c.case_no, status=c.status,
             source_type=ev.source_type if ev else None,
             plate_no=c.plate_no, violation_type=c.violation_type,
             captured_at=str(ev.captured_at) if ev and ev.captured_at else None,
@@ -54,13 +58,11 @@ def approve(case_id: int, body: ApproveRequest, db: Session = Depends(get_db),
 
 @router.post("/{case_id}/reject")
 def reject(case_id: int, body: RejectRequest, db: Session = Depends(get_db),
-           user: User = Depends(require_role("reviewer", "admin")),
-           provider: NotificationProvider = Depends(get_notification_provider)) -> dict:
-    return ReviewService(db, provider).reject(case_id, user, reject_reason=body.reject_reason)
+           user: User = Depends(require_role("reviewer", "admin"))) -> dict:
+    return ReviewService(db, EmailSmtpProvider()).reject(case_id, user, reject_reason=body.reject_reason)
 
 
-@router.post("/{case_id}/request-recheck", response_model=RecheckResponse)
+@router.post("/{case_id}/request-recheck", response_model=RecheckResponse, status_code=202)
 def request_recheck(case_id: int, db: Session = Depends(get_db),
-                    user: User = Depends(require_role("reviewer", "admin")),
-                    provider: NotificationProvider = Depends(get_notification_provider)) -> RecheckResponse:
-    return RecheckResponse(**ReviewService(db, provider).request_recheck(case_id, user))
+                    user: User = Depends(require_role("reviewer", "admin"))) -> RecheckResponse:
+    return RecheckResponse(**ReviewService(db, EmailSmtpProvider()).request_recheck(case_id, user))

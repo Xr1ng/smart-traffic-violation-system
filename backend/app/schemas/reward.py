@@ -7,10 +7,11 @@ class RewardOut(BaseModel):
     id: int
     citizen_id: int
     case_id: int
-    violation_id: int | None
+    violation_id: int | None = None
     amount: int
-    reason: str | None
+    reason: str | None = None
     status: str
+    paid_at: datetime | None = None
     created_at: datetime
     model_config = {"from_attributes": True}
 

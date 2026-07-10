@@ -37,7 +37,6 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import { delay } from '@/api/mock'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -56,26 +55,11 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    // v2.0 登录：username → 角色映射
-    const roleMap = {
-      admin: { role: 'admin', user: { id: 1, username: 'admin', role: 'admin' } },
-      reviewer: { role: 'reviewer', user: { id: 2, username: 'reviewer', role: 'reviewer' } },
-      citizen: { role: 'citizen', user: { id: 3, username: 'citizen', role: 'citizen' } }
-    }
-    const data = roleMap[form.username]
-    if (!data) {
-      ElMessage.error('用户名或密码错误')
-      return
-    }
-    // 模拟登录
-    userStore.token = 'mock-jwt-token'
-    userStore.role = data.role
-    userStore.userInfo = data.user
-    localStorage.setItem('token', userStore.token)
-    localStorage.setItem('role', data.role)
-    localStorage.setItem('userInfo', JSON.stringify(data.user))
+    await userStore.login({ username: form.username, password: form.password })
     ElMessage.success('登录成功')
     router.push(userStore.homePath)
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || error?.message || '登录失败')
   } finally {
     loading.value = false
   }

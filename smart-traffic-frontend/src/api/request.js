@@ -19,17 +19,11 @@ request.interceptors.request.use(
   error => Promise.reject(error)
 )
 
-// 响应拦截器 —— 统一处理错误
+// 响应拦截器 —— 统一包装后端响应
 request.interceptors.response.use(
   response => {
-    const res = response.data
-    // 后端统一返回格式 { code, message, data }
-    if (res.code === 401) {
-      localStorage.clear()
-      router.push('/login')
-      return Promise.reject(new Error('登录已过期'))
-    }
-    return res
+    // 后端 FastAPI 直接返回模型数据（无 {code, data} 包装），前端统一包装
+    return { code: 200, message: 'success', data: response.data }
   },
   error => {
     if (error.response) {
@@ -46,7 +40,8 @@ request.interceptors.response.use(
           ElMessage.error('服务器错误，请稍后重试')
           break
         default:
-          ElMessage.error(error.response.data?.message || '请求失败')
+          console.error('[API Error]', error.response?.status, error.response?.data)
+          ElMessage.error(error.response?.data?.detail || error.response?.data?.message || '请求失败')
       }
     } else {
       ElMessage.error('网络连接失败')

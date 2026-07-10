@@ -34,8 +34,8 @@ def test_overview_success(client, reviewer_user, reviewer_auth_headers, db):
     assert r.status_code == 200
     data = r.json()
     assert data["total_cases"] == 3
-    assert data["approved_count"] == 1
-    assert "period" in data
+    assert data["approve_rate"] > 0
+    assert "pending_count" in data
 
 
 def test_by_location_success(client, reviewer_user, reviewer_auth_headers, db):
