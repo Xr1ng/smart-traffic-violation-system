@@ -2,17 +2,16 @@
   <div class="page-container">
     <div class="page-header">
       <h2 class="page-title">违章记录管理</h2>
-      <el-button type="primary" @click="handleExport"><el-icon><Download /></el-icon>导出 Excel</el-button>
     </div>
 
     <!-- 筛选 -->
     <el-card class="filter-card">
       <el-form :inline="true" :model="filter" size="small">
         <el-form-item label="车牌号">
-          <el-input v-model="filter.plate_no" placeholder="输入车牌号" clearable />
+          <el-input v-model="filter.plate" placeholder="输入车牌号" clearable />
         </el-form-item>
         <el-form-item label="违章类型">
-          <el-select v-model="filter.violation_type" placeholder="全部" clearable style="width:140px">
+          <el-select v-model="filter.type" placeholder="全部" clearable style="width:140px">
             <el-option v-for="t in types" :key="t" :label="t" :value="t" />
           </el-select>
         </el-form-item>
@@ -72,7 +71,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { fetchViolations as getViolations } from '@/api/violation'
-import { ElMessage } from 'element-plus'
+import { buildViolationQuery } from '@/utils/contracts'
 
 const list = ref([])
 const loading = ref(false)
@@ -82,28 +81,24 @@ const total = ref(0)
 const types = ['闯红灯', '违停', '压线', '逆行', '超速', '占用应急车道']
 const statusMap = { pending: '待处理', handled: '已处理', cancelled: '已撤销' }
 
-const filter = reactive({ plate_no: '', violation_type: '', status: '' })
+const filter = reactive({ plate: '', type: '', status: '' })
 
 function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
 
 async function fetchList() {
   loading.value = true
   try {
-    const res = await getViolations({ ...filter, page: page.value, page_size: pageSize.value })
+    const res = await getViolations(buildViolationQuery(filter, page.value, pageSize.value))
     list.value = res.data.items
     total.value = res.data.total
-  } catch { ElMessage.error('加载失败') }
+  } catch { /* handled by interceptor */ }
   finally { loading.value = false }
 }
 
 function resetFilter() {
-  Object.assign(filter, { plate_no: '', violation_type: '', status: '' })
+  Object.assign(filter, { plate: '', type: '', status: '' })
   page.value = 1
   fetchList()
-}
-
-function handleExport() {
-  ElMessage.success('正在导出 Excel，请稍候...')
 }
 
 onMounted(fetchList)

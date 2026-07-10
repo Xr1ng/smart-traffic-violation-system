@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import * as contracts from '../src/utils/contracts.js'
 import {
   buildApprovePayload,
   buildRejectPayload,
@@ -50,6 +51,109 @@ test('uses backend violation query names', () => {
     start_time: '2026-07-01T00:00:00',
     end_time: '2026-07-10T23:59:59'
   })
+})
+
+test('omits empty violation filters from the query', () => {
+  assert.deepEqual(buildViolationQuery({
+    plate: '',
+    type: '',
+    status: ''
+  }, 1, 10), {
+    page: 1,
+    page_size: 10
+  })
+})
+
+test('builds vehicle queries with only the backend plate filter', () => {
+  assert.deepEqual(contracts.buildVehicleQuery({
+    plate: ' 粤A12345 ',
+    brand: '不存在的字段'
+  }, 2, 20), {
+    page: 2,
+    page_size: 20,
+    plate_no: '粤A12345'
+  })
+})
+
+test('omits an empty vehicle plate filter from the query', () => {
+  assert.deepEqual(contracts.buildVehicleQuery({ plate: '   ' }, 1, 10), {
+    page: 1,
+    page_size: 10
+  })
+})
+
+test('builds vehicle payloads with only schema fields and normalized blanks', () => {
+  assert.deepEqual(contracts.buildVehiclePayload({
+    plate_no: ' 粤B54321 ',
+    owner_id: '',
+    vehicle_type: ' ',
+    color: ' 白色 ',
+    brand: '不存在的字段'
+  }), {
+    plate_no: '粤B54321',
+    owner_id: null,
+    vehicle_type: null,
+    color: '白色'
+  })
+})
+
+test('builds exact user create payloads', () => {
+  assert.deepEqual(contracts.buildUserCreatePayload({
+    id: 99,
+    username: ' reviewer2 ',
+    password: 'secret123',
+    phone: '',
+    email: ' reviewer2@example.com ',
+    role_code: 'reviewer',
+    status: 'disabled'
+  }), {
+    username: 'reviewer2',
+    password: 'secret123',
+    phone: null,
+    email: 'reviewer2@example.com',
+    role_code: 'reviewer'
+  })
+})
+
+test('omits username and blank passwords from user update payloads', () => {
+  assert.deepEqual(contracts.buildUserUpdatePayload({
+    username: 'immutable-name',
+    password: '   ',
+    phone: '',
+    email: ' user@example.com ',
+    role_code: 'citizen',
+    status: 'disabled',
+    created_at: '2026-07-10T00:00:00'
+  }), {
+    phone: null,
+    email: 'user@example.com',
+    role_code: 'citizen',
+    status: 'disabled'
+  })
+})
+
+test('persists the new switch status without reversing it', async () => {
+  const row = { id: 7, status: 'active' }
+  let submitted
+
+  const saved = await contracts.persistUserStatus(row, 'active', async (id, payload) => {
+    submitted = { id, payload }
+  })
+
+  assert.equal(saved, true)
+  assert.deepEqual(submitted, { id: 7, payload: { status: 'active' } })
+  assert.equal(row.status, 'active')
+})
+
+test('rolls the switch status back when persistence fails', async () => {
+  const row = { id: 8, status: 'disabled' }
+
+  const saved = await contracts.persistUserStatus(row, 'disabled', async () => {
+    throw new Error('request failed')
+  })
+
+  assert.equal(saved, false)
+  assert.equal(row.status, 'active')
 })
 
 test('builds exact review request bodies', () => {
@@ -132,4 +236,46 @@ test('does not fabricate citizen announcements without a backend API', async () 
 
   assert.doesNotMatch(source, /系统升级通知/)
   assert.match(source, /const announcements = ref\(\[\]\)/)
+})
+
+test('reviewer violations use the shared query contract without duplicate errors or fake exports', async () => {
+  const source = await readFile(new URL('../src/views/review/ViolationList.vue', import.meta.url), 'utf8')
+
+  assert.match(source, /buildViolationQuery\(filter, page\.value, pageSize\.value\)/)
+  assert.doesNotMatch(source, /导出 Excel|handleExport|ElMessage/)
+})
+
+test('admin vehicles expose only backend vehicle fields and supported actions', async () => {
+  const source = await readFile(new URL('../src/views/admin/VehicleList.vue', import.meta.url), 'utf8')
+
+  for (const field of ['id', 'plate_no', 'owner_id', 'vehicle_type', 'color', 'created_at']) {
+    assert.match(source, new RegExp(`prop="${field}"|form\\.${field}`))
+  }
+  assert.match(source, /buildVehicleQuery/)
+  assert.match(source, /buildVehiclePayload/)
+  assert.doesNotMatch(
+    source,
+    /plate_number|owner_name|owner_phone|engine_number|prop="(?:brand|model)"|form\.(?:brand|model)/
+  )
+  assert.doesNotMatch(source, /详情|删除|viewDetail|handleDelete|deleteVehicle/)
+})
+
+test('admin users require a create-only password and remove fake deletion', async () => {
+  const source = await readFile(new URL('../src/views/admin/UserManage.vue', import.meta.url), 'utf8')
+
+  assert.match(source, /v-if="!dialog\.isEdit"[^>]*label="密码"/)
+  assert.match(source, /buildUserCreatePayload/)
+  assert.match(source, /buildUserUpdatePayload/)
+  assert.match(source, /@change="newStatus => toggleStatus\(row, newStatus\)"/)
+  assert.match(source, /persistUserStatus/)
+  assert.doesNotMatch(source, /删除|deleteUser|ElMessageBox/)
+})
+
+test('admin violations keep real actions and remove fake bulk and delete operations', async () => {
+  const source = await readFile(new URL('../src/views/admin/ViolationList.vue', import.meta.url), 'utf8')
+
+  assert.match(source, /\/admin\/violations\/upload/)
+  assert.match(source, /\/review\/case\/\$\{row\.case_id\}/)
+  assert.doesNotMatch(source, /selection|selectedIds|handleSelectionChange/)
+  assert.doesNotMatch(source, /批量导出|handleBatchExport|handleDelete|确定删除/)
 })

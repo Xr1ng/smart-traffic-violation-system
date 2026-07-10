@@ -28,6 +28,62 @@ export function buildViolationQuery(filters = {}, page = 1, pageSize = 10) {
   return query
 }
 
+function normalizeOptionalText(value) {
+  if (value == null) return null
+  const normalized = String(value).trim()
+  return normalized || null
+}
+
+export function buildVehicleQuery(filters = {}, page = 1, pageSize = 10) {
+  const query = { page, page_size: pageSize }
+  const plateNo = normalizeOptionalText(filters.plate)
+
+  if (plateNo) query.plate_no = plateNo
+  return query
+}
+
+export function buildVehiclePayload(form = {}) {
+  return {
+    plate_no: normalizeOptionalText(form.plate_no),
+    owner_id: form.owner_id === '' || form.owner_id == null ? null : form.owner_id,
+    vehicle_type: normalizeOptionalText(form.vehicle_type),
+    color: normalizeOptionalText(form.color)
+  }
+}
+
+export function buildUserCreatePayload(form = {}) {
+  return {
+    username: normalizeOptionalText(form.username),
+    password: form.password,
+    phone: normalizeOptionalText(form.phone),
+    email: normalizeOptionalText(form.email),
+    role_code: normalizeOptionalText(form.role_code)
+  }
+}
+
+export function buildUserUpdatePayload(form = {}) {
+  const payload = {}
+
+  for (const field of ['phone', 'email', 'role_code', 'status']) {
+    if (form[field] !== undefined) payload[field] = normalizeOptionalText(form[field])
+  }
+  if (typeof form.password === 'string' && form.password.trim()) {
+    payload.password = form.password
+  }
+
+  return payload
+}
+
+export async function persistUserStatus(row, newStatus, persist) {
+  try {
+    await persist(row.id, { status: newStatus })
+    return true
+  } catch {
+    row.status = newStatus === 'active' ? 'disabled' : 'active'
+    return false
+  }
+}
+
 export function buildApprovePayload(form) {
   return {
     plate_no: form.plate_no,

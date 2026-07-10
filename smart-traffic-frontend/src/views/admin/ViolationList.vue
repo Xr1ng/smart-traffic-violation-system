@@ -3,9 +3,6 @@
     <div class="page-header">
       <h2 class="page-title">违章记录管理</h2>
       <div style="display:flex;gap:12px">
-        <el-button @click="handleBatchExport" :disabled="selectedIds.length === 0">
-          批量导出 Excel
-        </el-button>
         <el-button type="primary" @click="router.push('/admin/violations/upload')">
           上传违章证据
         </el-button>
@@ -42,8 +39,7 @@
     </div>
 
     <!-- 表格 -->
-    <el-table :data="list" border stripe v-loading="loading" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="50" />
+    <el-table :data="list" border stripe v-loading="loading">
       <el-table-column prop="violation_no" label="违章编号" min-width="170" />
       <el-table-column prop="plate_no" label="车牌号" width="120" />
       <el-table-column prop="violation_type" label="违章类型" width="100" />
@@ -57,16 +53,11 @@
           <el-tag v-else type="info">{{ row.status }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="140" fixed="right">
+      <el-table-column label="操作" width="90" fixed="right">
         <template #default="{ row }">
           <el-button size="small" type="primary" @click="router.push(`/review/case/${row.case_id}`)">
             审核
           </el-button>
-          <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
-            <template #reference>
-              <el-button size="small" type="danger">删除</el-button>
-            </template>
-          </el-popconfirm>
         </template>
       </el-table-column>
     </el-table>
@@ -86,7 +77,6 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { fetchViolations } from '@/api/violation'
 import { buildViolationQuery } from '@/utils/contracts'
 
@@ -96,15 +86,10 @@ const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
-const selectedIds = ref([])
 
 const search = reactive({
   plate: '', location: '', type: '', status: '', dateRange: null
 })
-
-function handleSelectionChange(rows) {
-  selectedIds.value = rows.map(r => r.id)
-}
 
 async function fetchList() {
   loading.value = true
@@ -119,14 +104,6 @@ async function fetchList() {
 function resetSearch() {
   Object.keys(search).forEach(k => search[k] = k === 'dateRange' ? null : '')
   fetchList()
-}
-
-async function handleDelete(id) {
-  ElMessage.warning('暂不支持删除')
-}
-
-async function handleBatchExport() {
-  ElMessage.warning('导出功能开发中')
 }
 
 onMounted(fetchList)
