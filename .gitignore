@@ -27,6 +27,7 @@ docs/implementation-guide.md
 # IDE
 .vscode/
 .idea/
+.worktrees/
 
 # OS
 Thumbs.db
