@@ -74,13 +74,13 @@ def list_my_vehicles(
     )
 
 
-@citizen_router.post("/me", response_model=VehicleOut, status_code=201)
+@citizen_router.post("/me", response_model=VehicleOut)
 def bind_my_vehicle(
     body: VehicleBindIn,
     db: Session = Depends(get_db),
     user: User = Depends(require_role("citizen")),
 ) -> VehicleOut:
-    vehicle = VehicleService(db).create_vehicle(
+    vehicle = VehicleService(db).bind_vehicle(
         plate_no=body.plate_no,
         owner_id=user.id,
         vehicle_type=body.vehicle_type,

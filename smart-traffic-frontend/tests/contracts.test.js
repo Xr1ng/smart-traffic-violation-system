@@ -226,6 +226,61 @@ test('describes missing AI results according to case processing state', () => {
   }
 })
 
+test('loads every case media URL through the authenticated media loader', async () => {
+  const requested = []
+  const media = await contracts.loadProtectedMediaUrls({
+    original_url: '/media/original.jpg',
+    annotated_url: '/media/annotated.jpg'
+  }, async url => {
+    requested.push(url)
+    return `blob:${url}`
+  })
+
+  assert.deepEqual(requested, ['/media/original.jpg', '/media/annotated.jpg'])
+  assert.deepEqual(media, {
+    original_url: 'blob:/media/original.jpg',
+    annotated_url: 'blob:/media/annotated.jpg'
+  })
+
+  assert.equal(
+    contracts.mediaPathToApiPath('/media/evidence name.jpg'),
+    '/media/evidence%20name.jpg'
+  )
+  assert.throws(() => contracts.mediaPathToApiPath('/other/evidence.jpg'))
+})
+
+test('keeps a case visible when protected media cannot be loaded', async () => {
+  const media = await contracts.loadProtectedMediaUrls(
+    { original_url: '/media/missing.jpg' },
+    async () => { throw new Error('missing') }
+  )
+
+  assert.deepEqual(media, { original_url: null })
+})
+
+test('releases generated media object URLs', () => {
+  const released = []
+  contracts.releaseProtectedMediaUrls({
+    original_url: 'blob:one',
+    annotated_url: null,
+    external_url: 'https://example.com/evidence.jpg'
+  }, url => released.push(url))
+
+  assert.deepEqual(released, ['blob:one'])
+})
+
+test('accepts only the latest active protected-media request', () => {
+  const guard = contracts.createLatestRequestGuard()
+  const first = guard.begin()
+  const second = guard.begin()
+
+  assert.equal(guard.isCurrent(first), false)
+  assert.equal(guard.isCurrent(second), true)
+
+  guard.invalidate()
+  assert.equal(guard.isCurrent(second), false)
+})
+
 test('maps notified cases and nested review results to the approved terminal view', () => {
   assert.equal(isApprovedCaseStatus('approved'), true)
   assert.equal(isApprovedCaseStatus('notified'), true)
@@ -284,6 +339,17 @@ test('reviewer violations use the shared query contract without duplicate errors
   assert.doesNotMatch(apiSource, /exportExcel|导出成功/)
 })
 
+test('workbench finishes fallible count requests before creating media object URLs', async () => {
+  const source = await readFile(new URL('../src/views/review/Workbench.vue', import.meta.url), 'utf8')
+
+  assert.ok(source.indexOf('const [uploadedRes, pendingRes]') >= 0)
+  assert.ok(source.indexOf('const nextCases = await Promise.all') >= 0)
+  assert.ok(
+    source.indexOf('const [uploadedRes, pendingRes]') <
+      source.indexOf('const nextCases = await Promise.all')
+  )
+})
+
 test('admin vehicles expose only backend vehicle fields and supported actions', async () => {
   const source = await readFile(new URL('../src/views/admin/VehicleList.vue', import.meta.url), 'utf8')
 
@@ -317,4 +383,11 @@ test('admin violations keep real actions and remove fake bulk and delete operati
   assert.match(source, /\/review\/case\/\$\{row\.case_id\}/)
   assert.doesNotMatch(source, /selection|selectedIds|handleSelectionChange/)
   assert.doesNotMatch(source, /批量导出|handleBatchExport|handleDelete|确定删除/)
+})
+
+test('AI report page is a neutral unavailable state without fake generation or export', async () => {
+  const source = await readFile(new URL('../src/views/stats/Report.vue', import.meta.url), 'utf8')
+
+  assert.match(source, /AI 分析模块暂未接入/)
+  assert.doesNotMatch(source, /generateReportApi|报告已生成|导出 PDF|正在导出 PDF/)
 })

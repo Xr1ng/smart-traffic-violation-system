@@ -106,6 +106,51 @@ export function caseAiFallbackText(status) {
   return ['detecting', 'ai_reviewing'].includes(status) ? 'AI 处理中...' : '暂无 AI 结果'
 }
 
+export function mediaPathToApiPath(mediaUrl) {
+  const match = /^\/media\/([^/?#]+)$/.exec(mediaUrl ?? '')
+  if (!match) throw new Error('Unsupported media URL')
+  return `/media/${encodeURIComponent(decodeURIComponent(match[1]))}`
+}
+
+export async function loadProtectedMediaUrls(media = {}, loadMedia) {
+  const entries = await Promise.all(
+    Object.entries(media).map(async ([key, url]) => {
+      if (!url) return [key, null]
+      try {
+        return [key, await loadMedia(url)]
+      } catch {
+        return [key, null]
+      }
+    })
+  )
+  return Object.fromEntries(entries)
+}
+
+export function releaseProtectedMediaUrls(media = {}, revoke = URL.revokeObjectURL) {
+  for (const url of Object.values(media)) {
+    if (typeof url === 'string' && url.startsWith('blob:')) revoke(url)
+  }
+}
+
+export function createLatestRequestGuard() {
+  let generation = 0
+  let active = true
+
+  return {
+    begin() {
+      generation += 1
+      return generation
+    },
+    isCurrent(requestGeneration) {
+      return active && requestGeneration === generation
+    },
+    invalidate() {
+      active = false
+      generation += 1
+    }
+  }
+}
+
 export function isApprovedCaseStatus(status) {
   return ['approved', 'notified'].includes(status)
 }

@@ -32,6 +32,26 @@ class VehicleService:
         items = q.order_by(Vehicle.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
         return {"items": items, "total": total, "page": page, "page_size": page_size}
 
+    def bind_vehicle(self, *, plate_no: str, owner_id: int,
+                     vehicle_type: str | None, color: str | None) -> Vehicle:
+        vehicle = (
+            self.db.query(Vehicle)
+            .filter(Vehicle.plate_no == plate_no, Vehicle.owner_id.is_(None))
+            .with_for_update()
+            .first()
+        )
+        if vehicle is None:
+            raise HTTPException(status_code=404, detail="车辆不存在或不可绑定")
+        if vehicle_type and vehicle.vehicle_type and vehicle_type != vehicle.vehicle_type:
+            raise HTTPException(status_code=409, detail="车辆信息不匹配")
+        if color and vehicle.color and color != vehicle.color:
+            raise HTTPException(status_code=409, detail="车辆信息不匹配")
+
+        vehicle.owner_id = owner_id
+        self.db.commit()
+        self.db.refresh(vehicle)
+        return vehicle
+
     def get_vehicle(self, vehicle_id: int) -> Vehicle:
         v = self.db.get(Vehicle, vehicle_id)
         if v is None:

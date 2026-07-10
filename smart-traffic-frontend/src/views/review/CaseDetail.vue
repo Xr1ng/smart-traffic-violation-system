@@ -213,14 +213,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchCaseDetail as getCaseDetail, approveCase, rejectCase } from '@/api/case'
+import { fetchProtectedMediaUrl } from '@/api/media'
 import {
   buildApprovePayload,
   buildRejectPayload,
+  createLatestRequestGuard,
   getCaseReviewOpinion,
-  isApprovedCaseStatus
+  isApprovedCaseStatus,
+  loadProtectedMediaUrls,
+  releaseProtectedMediaUrls
 } from '@/utils/contracts'
 import { ElMessage } from 'element-plus'
 
@@ -231,6 +235,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const imageTab = ref('original')
 const activeSteps = ref('detection')
+const mediaRequestGuard = createLatestRequestGuard()
 
 const violationTypes = ['闯红灯', '违停', '压线', '逆行', '超速', '占用应急车道', '不礼让行人', '不按导向行驶']
 
@@ -270,15 +275,28 @@ function aiTag(c) { return aiTypeMap[c] || 'info' }
 function objLabel(l) { return objLabelMap[l] || l }
 
 async function fetchDetail() {
+  const requestGeneration = mediaRequestGuard.begin()
   loading.value = true
   try {
     const res = await getCaseDetail(route.params.id)
-    detail.value = res.data
+    const nextDetail = {
+      ...res.data,
+      media: await loadProtectedMediaUrls(res.data.media, fetchProtectedMediaUrl)
+    }
+    if (!mediaRequestGuard.isCurrent(requestGeneration)) {
+      releaseProtectedMediaUrls(nextDetail.media)
+      return
+    }
+    releaseProtectedMediaUrls(detail.value.media)
+    detail.value = nextDetail
     // 填充审核表单默认值
     reviewForm.plate_no = detail.value.plate_no || ''
     reviewForm.violation_type = detail.value.rule_result?.candidate_violation_type || ''
-  } catch { ElMessage.error('加载案件失败') }
-  finally { loading.value = false }
+  } catch {
+    if (mediaRequestGuard.isCurrent(requestGeneration)) ElMessage.error('加载案件失败')
+  } finally {
+    if (mediaRequestGuard.isCurrent(requestGeneration)) loading.value = false
+  }
 }
 
 async function handleApprove() {
@@ -306,6 +324,10 @@ async function handleReject() {
 }
 
 onMounted(fetchDetail)
+onUnmounted(() => {
+  mediaRequestGuard.invalidate()
+  releaseProtectedMediaUrls(detail.value.media)
+})
 </script>
 
 <style scoped>

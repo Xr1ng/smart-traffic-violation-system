@@ -46,9 +46,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchCases } from '@/api/case'
+import { fetchProtectedMediaUrl } from '@/api/media'
+import {
+  createLatestRequestGuard,
+  loadProtectedMediaUrls,
+  releaseProtectedMediaUrls
+} from '@/utils/contracts'
 
 const router = useRouter()
 const list = ref([])
@@ -56,6 +62,7 @@ const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const mediaRequestGuard = createLatestRequestGuard()
 
 const statusMap = {
   uploaded: '待识别', detecting: '识别中', ai_reviewing: 'AI 审核中',
@@ -65,16 +72,32 @@ const statusMap = {
 function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
 
 async function fetchList() {
+  const requestGeneration = mediaRequestGuard.begin()
   loading.value = true
   try {
     const res = await fetchCases({ source_type: 'citizen', page: page.value, page_size: pageSize.value })
-    list.value = res.data.items
+    const nextList = await Promise.all(
+      res.data.items.map(async item => ({
+        ...item,
+        media: await loadProtectedMediaUrls(item.media, fetchProtectedMediaUrl)
+      }))
+    )
+    if (!mediaRequestGuard.isCurrent(requestGeneration)) {
+      nextList.forEach(item => releaseProtectedMediaUrls(item.media))
+      return
+    }
+    list.value.forEach(item => releaseProtectedMediaUrls(item.media))
+    list.value = nextList
     total.value = res.data.total
   } catch {}
-  loading.value = false
+  if (mediaRequestGuard.isCurrent(requestGeneration)) loading.value = false
 }
 
 onMounted(fetchList)
+onUnmounted(() => {
+  mediaRequestGuard.invalidate()
+  list.value.forEach(item => releaseProtectedMediaUrls(item.media))
+})
 </script>
 
 <style scoped>

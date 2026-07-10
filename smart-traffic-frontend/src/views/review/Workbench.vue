@@ -99,7 +99,13 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchCases as getCases } from '@/api/case'
-import { caseAiFallbackText } from '@/utils/contracts'
+import { fetchProtectedMediaUrl } from '@/api/media'
+import {
+  caseAiFallbackText,
+  createLatestRequestGuard,
+  loadProtectedMediaUrls,
+  releaseProtectedMediaUrls
+} from '@/utils/contracts'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -109,6 +115,7 @@ const page = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
 const pendingTotal = ref(0)
+const mediaRequestGuard = createLatestRequestGuard()
 
 const filter = reactive({
   status: '',
@@ -140,6 +147,7 @@ function aiConclusionText(c) { return aiConclusionMap[c] || c }
 function aiTagType(c) { return aiTagTypeMap[c] || 'info' }
 
 async function fetchCases() {
+  const requestGeneration = mediaRequestGuard.begin()
   loading.value = true
   try {
     const res = await getCases({
@@ -149,19 +157,36 @@ async function fetchCases() {
       page: page.value,
       page_size: pageSize.value
     })
-    cases.value = res.data.items
-    total.value = res.data.total
+    let nextPendingTotal = 0
     if (!filter.status || ['uploaded', 'pending_human_review'].includes(filter.status)) {
       const [uploadedRes, pendingRes] = await Promise.all([
         getCases({ status: 'uploaded', page: 1, page_size: 1 }),
         getCases({ status: 'pending_human_review', page: 1, page_size: 1 })
       ])
-      pendingTotal.value = uploadedRes.data.total + pendingRes.data.total
-    } else {
-      pendingTotal.value = 0
+      nextPendingTotal = uploadedRes.data.total + pendingRes.data.total
     }
-  } catch (e) { console.error('[Workbench] fetchCases failed', e); ElMessage.error('加载案件失败') }
-  finally { loading.value = false }
+    const nextCases = await Promise.all(
+      res.data.items.map(async item => ({
+        ...item,
+        media: await loadProtectedMediaUrls(item.media, fetchProtectedMediaUrl)
+      }))
+    )
+    if (!mediaRequestGuard.isCurrent(requestGeneration)) {
+      nextCases.forEach(item => releaseProtectedMediaUrls(item.media))
+      return
+    }
+    cases.value.forEach(item => releaseProtectedMediaUrls(item.media))
+    cases.value = nextCases
+    total.value = res.data.total
+    pendingTotal.value = nextPendingTotal
+  } catch (e) {
+    if (mediaRequestGuard.isCurrent(requestGeneration)) {
+      console.error('[Workbench] fetchCases failed', e)
+      ElMessage.error('加载案件失败')
+    }
+  } finally {
+    if (mediaRequestGuard.isCurrent(requestGeneration)) loading.value = false
+  }
 }
 
 function openDetail(id) {
@@ -178,7 +203,11 @@ onMounted(() => {
     }
   }, 15000)
 })
-onUnmounted(() => clearInterval(pollTimer))
+onUnmounted(() => {
+  mediaRequestGuard.invalidate()
+  clearInterval(pollTimer)
+  cases.value.forEach(item => releaseProtectedMediaUrls(item.media))
+})
 </script>
 
 <style scoped>

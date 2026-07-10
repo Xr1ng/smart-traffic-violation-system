@@ -7,10 +7,6 @@ Create Date: 2026-07-10 14:20:34.501808
 """
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
-
-
 # revision identifiers, used by Alembic.
 revision: str = 'c98f93f77440'
 down_revision: Union[str, Sequence[str], None] = 'e6b1a56b15ef'
@@ -19,25 +15,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
-    if 'violation_rules' not in sa.inspect(op.get_bind()).get_table_names():
-        op.create_table('violation_rules',
-            sa.Column('id', sa.Integer(), nullable=False),
-            sa.Column('rule_code', sa.String(length=32), nullable=False),
-            sa.Column('violation_type', sa.String(length=32), nullable=False),
-            sa.Column('rule_type', sa.String(length=32), nullable=False),
-            sa.Column('params', sa.String(length=512), nullable=True),
-            sa.Column('description', sa.String(length=255), nullable=True),
-            sa.Column('is_active', sa.Boolean(), nullable=False),
-            sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-            sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-            sa.PrimaryKeyConstraint('id')
-        )
-        op.create_index(op.f('ix_violation_rules_rule_code'), 'violation_rules', ['rule_code'], unique=True)
+    """The merge revision owns the shared violation_rules DDL."""
+    pass
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
-    if 'violation_rules' in sa.inspect(op.get_bind()).get_table_names():
-        op.drop_index(op.f('ix_violation_rules_rule_code'), table_name='violation_rules')
-        op.drop_table('violation_rules')
+    pass
