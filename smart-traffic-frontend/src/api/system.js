@@ -144,7 +144,6 @@ export const getNotificationsByViolation = async (violationId) => {
   await delay()
   return ok([])
 }
-import request from './request'
 
 // ==================== 真实后端（张浩-7/8，admin 鉴权）====================
 // 用户管理 — /api/v1/admin/users

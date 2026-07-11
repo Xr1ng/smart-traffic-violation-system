@@ -1,0 +1,3 @@
+[      64ms] [WARNING] [Vue Router warn]: uncaught error during route navigation: @ http://localhost:5174/node_modules/.vite/deps/vue-router.js?v=52fe1b17:51
+[      64ms] [ERROR] SyntaxError: Identifier 'request' has already been declared @ http://localhost:5174/node_modules/.vite/deps/vue-router.js?v=52fe1b17:2107
+[      64ms] [WARNING] [Vue Router warn]: Unexpected error when starting the router: SyntaxError: Identifier 'request' has already been declared @ http://localhost:5174/node_modules/.vite/deps/vue-router.js?v=52fe1b17:51

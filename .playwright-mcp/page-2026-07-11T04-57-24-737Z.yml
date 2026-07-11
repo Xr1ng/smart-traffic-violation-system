@@ -1,0 +1,10 @@
+- generic [ref=f15e4]:
+  - heading "智能交通违章管理平台" [level=2] [ref=f15e5]
+  - paragraph [ref=f15e6]: AI 驱动的交通违章智能管理系统
+  - generic [ref=f15e7]:
+    - textbox "请输入用户名" [ref=f15e16]
+    - textbox "请输入密码" [ref=f15e26]
+    - button "登 录" [ref=f15e29] [cursor=pointer]
+  - generic [ref=f15e31]:
+    - text: 还没有账号？
+    - generic [ref=f15e32] [cursor=pointer]: 立即注册
