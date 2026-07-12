@@ -1,62 +1,91 @@
 <template>
   <div class="citizen-home">
-    <el-row :gutter="20">
-      <el-col :span="16">
-        <el-card>
-          <template #header>📢 系统公告</template>
-          <el-timeline v-if="announcements.length">
-            <el-timeline-item v-for="item in announcements" :key="item.id" :timestamp="item.created_at" placement="top">
-              <el-card shadow="hover">
-                <h4>{{ item.title }}</h4>
-                <p style="color:#666;margin-top:8px">{{ item.content }}</p>
-              </el-card>
+    <el-row :gutter="16">
+      <!-- 左侧：宣传图片 + 系统公告 -->
+      <el-col :span="12" :xs="24" :sm="24" :md="12">
+        <!-- 宣传图片 -->
+        <el-card class="banner-card" :body-style="{ padding: '0' }">
+          <img src="/images/users.jpg" alt="交通安全宣传" class="banner-img" />
+        </el-card>
+
+        <!-- 系统公告 -->
+        <el-card class="announcement-card" style="margin-top: 16px" :body-style="{ padding: '12px' }">
+          <template #header>
+            <div class="card-header">📢 系统公告</div>
+          </template>
+          <el-timeline v-if="announcements.length" class="compact-timeline">
+            <el-timeline-item
+              v-for="item in announcements"
+              :key="item.id"
+              :timestamp="item.created_at"
+              placement="top"
+            >
+              <div class="announcement-title">{{ item.title }}</div>
+              <div class="announcement-content">{{ item.content }}</div>
             </el-timeline-item>
           </el-timeline>
-          <p v-else style="text-align:center;color:#999;padding:40px">暂无公告</p>
+          <el-empty v-else description="暂无公告" :image-size="60" />
         </el-card>
       </el-col>
 
-      <el-col :span="8">
-        <el-card>
-          <template #header>🎯 快捷功能</template>
+      <!-- 右侧：快捷功能 + 个人概览（缩小） -->
+      <el-col :span="12" :xs="24" :sm="24" :md="12">
+        <!-- 快捷功能 -->
+        <el-card class="func-card" :body-style="{ padding: '16px' }">
+          <template #header>
+            <div class="card-header">🎯 快捷功能</div>
+          </template>
           <div class="quick-links">
             <div class="quick-link" @click="router.push('/citizen/report')">
-              <el-icon :size="32" color="#e6a23c"><Camera /></el-icon>
+              <el-icon :size="28" color="#e6a23c"><Camera /></el-icon>
               <span>随手拍举报</span>
             </div>
             <div class="quick-link" @click="router.push('/citizen/my-violations')">
-              <el-icon :size="32" color="#f56c6c"><WarningFilled /></el-icon>
+              <el-icon :size="28" color="#f56c6c"><WarningFilled /></el-icon>
               <span>我的违章</span>
             </div>
             <div class="quick-link" @click="router.push('/citizen/my-reports')">
-              <el-icon :size="32" color="#409eff"><List /></el-icon>
+              <el-icon :size="28" color="#409eff"><List /></el-icon>
               <span>举报进度</span>
             </div>
             <div class="quick-link" @click="router.push('/citizen/vehicles')">
-              <el-icon :size="32" color="#67c23a"><Van /></el-icon>
+              <el-icon :size="28" color="#67c23a"><Van /></el-icon>
               <span>车辆绑定</span>
             </div>
           </div>
         </el-card>
 
-        <el-card style="margin-top:16px">
-          <template #header>ℹ️ 个人概览</template>
-          <div class="overview-item">
-            <span>我的违章</span>
-            <span class="num">{{ stats.violations }}</span>
-          </div>
-          <div class="overview-item">
-            <span>举报次数</span>
-            <span class="num">{{ stats.reports }}</span>
-          </div>
-          <div class="overview-item">
-            <span>获得奖励</span>
-            <span class="num" style="color:#e6a23c">{{ stats.rewards }}元</span>
-          </div>
-          <div class="overview-item">
-            <span>绑定车辆</span>
-            <span class="num" style="color:#409eff">{{ stats.vehicles }}</span>
-          </div>
+        <!-- 个人概览 -->
+        <el-card class="overview-card" style="margin-top: 16px" :body-style="{ padding: '12px' }">
+          <template #header>
+            <div class="card-header">ℹ️ 个人概览</div>
+          </template>
+          <el-row :gutter="16">
+            <el-col :span="6" :xs="12">
+              <div class="stat-card">
+                <div class="stat-label">我的违章</div>
+                <div class="stat-num">{{ stats.violations }}</div>
+              </div>
+            </el-col>
+            <el-col :span="6" :xs="12">
+              <div class="stat-card">
+                <div class="stat-label">举报次数</div>
+                <div class="stat-num">{{ stats.reports }}</div>
+              </div>
+            </el-col>
+            <el-col :span="6" :xs="12">
+              <div class="stat-card">
+                <div class="stat-label">获得奖励</div>
+                <div class="stat-num" style="color:#e6a23c">{{ stats.rewards }}积分</div>
+              </div>
+            </el-col>
+            <el-col :span="6" :xs="12">
+              <div class="stat-card">
+                <div class="stat-label">绑定车辆</div>
+                <div class="stat-num" style="color:#409eff">{{ stats.vehicles }}</div>
+              </div>
+            </el-col>
+          </el-row>
         </el-card>
       </el-col>
     </el-row>
@@ -98,6 +127,40 @@ onMounted(loadOverview)
 </script>
 
 <style scoped>
+.citizen-home { padding: 0; }
+.card-header {
+  font-weight: 600;
+  font-size: 15px;
+}
+.announcement-card {
+  min-height: 200px;
+}
+.announcement-card :deep(.el-card__header) {
+  padding: 12px 16px;
+}
+.compact-timeline :deep(.el-timeline-item__node) {
+  top: 4px;
+}
+.announcement-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-color);
+  line-height: 1.4;
+}
+.announcement-content {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.func-card :deep(.el-card__header) {
+  padding: 12px 16px;
+}
 .quick-links {
   display: flex;
   justify-content: space-around;
@@ -110,18 +173,49 @@ onMounted(loadOverview)
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-radius: 8px;
   transition: background .3s;
-  font-size: 12px;
+  font-size: 13px;
   min-width: 80px;
 }
-.quick-link:hover { background: var(--bg-color); }
-.overview-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-color);
+.quick-link:hover { background: var(--el-fill-color-light); }
+
+.overview-card :deep(.el-card__header) {
+  padding: 12px 16px;
 }
-.overview-item .num { font-size: 20px; font-weight: bold; }
+.stat-card {
+  text-align: center;
+  padding: 12px 8px;
+  border-radius: 8px;
+  background: var(--el-fill-color-light);
+  transition: background .3s;
+}
+.stat-card:hover {
+  background: var(--el-fill-color);
+}
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.stat-num {
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+.banner-card { border-radius: 8px; overflow: hidden; }
+.banner-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .el-col { margin-bottom: 12px; }
+  .el-col:last-child { margin-bottom: 0; }
+  .banner-img { height: 160px; }
+}
 </style>

@@ -27,7 +27,7 @@
       </el-table-column>
       <el-table-column label="奖励" width="100">
         <template #default="{ row }">
-          <span v-if="row.reward" style="color:#e6a23c;font-weight:bold">+{{ row.reward }}元</span>
+          <span v-if="row.reward" style="color:#e6a23c;font-weight:bold">+{{ row.reward }}积分</span>
           <span v-else>—</span>
         </template>
       </el-table-column>

@@ -72,7 +72,7 @@
                 </el-descriptions>
                 <div class="detected-items">
                   <el-tag
-                    v-for="obj in detail.detection_result.detected_objects"
+                    v-for="obj in detail.detection_result.objects"
                     :key="obj.label"
                     size="small"
                     :type="obj.confidence > 0.9 ? 'success' : obj.confidence > 0.8 ? 'warning' : 'danger'"
@@ -136,7 +136,7 @@
               <template #title>
                 <div class="step-title">
                   <span class="step-num">④</span>
-                  <span>{{ detail.ai_review?.review_mode === 'vision_llm' ? '多模态复核' : 'AI 初审' }}</span>
+                  <span>AI 初审</span>
                   <el-tag v-if="detail.ai_review" size="small" :type="aiTag(detail.ai_review.conclusion)">
                     {{ aiText(detail.ai_review.conclusion) }}
                   </el-tag>
@@ -145,17 +145,11 @@
               </template>
               <template v-if="detail.ai_review">
                 <el-descriptions :column="1" border size="small">
-                  <el-descriptions-item label="审查模式">
-                    {{ detail.ai_review.review_mode === 'vision_llm' ? '多模态模型复核' : '文本 LLM 初审' }}
-                  </el-descriptions-item>
                   <el-descriptions-item label="结论">
                     <el-tag :type="aiTag(detail.ai_review.conclusion)">{{ aiText(detail.ai_review.conclusion) }}</el-tag>
                   </el-descriptions-item>
                   <el-descriptions-item label="AI 置信度">{{ (detail.ai_review.ai_confidence * 100).toFixed(0) }}%</el-descriptions-item>
                   <el-descriptions-item label="初审理由">{{ detail.ai_review.reason }}</el-descriptions-item>
-                  <el-descriptions-item label="风险点" v-if="detail.ai_review.risk_points?.length">
-                    <span style="color:#e6a23c">{{ detail.ai_review.risk_points?.join('；') }}</span>
-                  </el-descriptions-item>
                 </el-descriptions>
               </template>
               <el-empty v-else description="等待 AI 初审" :image-size="40" />

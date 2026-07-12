@@ -1,49 +1,84 @@
 <template>
   <el-container class="admin-layout">
-    <!-- 侧边栏 -->
+    <!-- 左侧侧边栏 -->
     <el-aside :width="isCollapse ? '64px' : '220px'" class="aside">
       <div class="logo" @click="router.push('/admin/stats')">
         <span v-if="!isCollapse">🚦 交通违章管理</span>
         <span v-else>🚦</span>
       </div>
 
-      <div class="sidebar-menu">
-        <div :class="['menu-item', { active: isActive('/admin/stats') }]" @click="navigate('/admin/stats')">
+      <el-menu
+        :default-active="activeMenu"
+        :collapse="isCollapse"
+        :collapse-transition="false"
+        background-color="transparent"
+        text-color="#bfcbd9"
+        active-text-color="#409EFF"
+        class="sidebar-menu"
+      >
+        <!-- 数据概览 -->
+        <el-menu-item index="/admin/stats" @click="nav('/admin/stats')">
           <el-icon><TrendCharts /></el-icon>
-          <span v-if="!isCollapse">统计分析</span>
-        </div>
+          <template #title>统计分析</template>
+        </el-menu-item>
 
-        <div :class="['menu-item', { active: isActive('/review/workbench') }]" @click="navigate('/review/workbench')">
-          <el-icon><Checked /></el-icon>
-          <span v-if="!isCollapse">案件审核</span>
-        </div>
+        <!-- 违章管理 -->
+        <el-sub-menu index="violation-group">
+          <template #title>
+            <el-icon><WarningFilled /></el-icon>
+            <span>违章管理</span>
+          </template>
+          <el-menu-item index="/admin/violations" @click="nav('/admin/violations')">违章列表</el-menu-item>
+          <el-menu-item index="/admin/violations/upload" @click="nav('/admin/violations/upload')">违章上传</el-menu-item>
+          <el-menu-item index="/review/workbench" @click="nav('/review/workbench')">案件审核</el-menu-item>
+        </el-sub-menu>
 
-        <div class="menu-group-title" v-if="!isCollapse">用户管理</div>
-        <div :class="['menu-item sub', { active: isActive('/admin/users') }]" @click="navigate('/admin/users')">
-          <span v-if="!isCollapse">用户列表</span>
-        </div>
-        <div :class="['menu-item sub', { active: isActive('/admin/roles') }]" @click="navigate('/admin/roles')">
-          <span v-if="!isCollapse">角色权限</span>
-        </div>
+        <!-- 车辆与驾驶人 -->
+        <el-sub-menu index="vehicle-group">
+          <template #title>
+            <el-icon><Van /></el-icon>
+            <span>车辆与驾驶人</span>
+          </template>
+          <el-menu-item index="/admin/vehicles" @click="nav('/admin/vehicles')">车辆管理</el-menu-item>
+          <el-menu-item index="/admin/drivers" @click="nav('/admin/drivers')">驾驶人管理</el-menu-item>
+        </el-sub-menu>
 
-        <div :class="['menu-item', { active: isActive('/admin/cameras') }]" @click="navigate('/admin/cameras')">
+        <!-- 用户管理 -->
+        <el-sub-menu index="user-group">
+          <template #title>
+            <el-icon><UserFilled /></el-icon>
+            <span>用户管理</span>
+          </template>
+          <el-menu-item index="/admin/users" @click="nav('/admin/users')">用户列表</el-menu-item>
+        </el-sub-menu>
+
+        <!-- 设备管理 -->
+        <el-menu-item index="/admin/cameras" @click="nav('/admin/cameras')">
           <el-icon><VideoCamera /></el-icon>
-          <span v-if="!isCollapse">摄像头管理</span>
-        </div>
+          <template #title>摄像头管理</template>
+        </el-menu-item>
 
-        <div class="menu-group-title" v-if="!isCollapse">系统配置</div>
-        <div :class="['menu-item sub', { active: isActive('/admin/rules') }]" @click="navigate('/admin/rules')">
-          <span v-if="!isCollapse">违章规则</span>
-        </div>
-        <div :class="['menu-item sub', { active: isActive('/admin/sms-templates') }]" @click="navigate('/admin/sms-templates')">
-          <span v-if="!isCollapse">短信模板</span>
-        </div>
+        <!-- 系统配置 -->
+        <el-sub-menu index="config-group">
+          <template #title>
+            <el-icon><Tools /></el-icon>
+            <span>系统配置</span>
+          </template>
+          <el-menu-item index="/admin/rules" @click="nav('/admin/rules')">违章规则</el-menu-item>
+          <el-menu-item index="/admin/sms-templates" @click="nav('/admin/sms-templates')">短信模板</el-menu-item>
+          <el-menu-item index="/admin/announcements" @click="nav('/admin/announcements')">公告管理</el-menu-item>
+        </el-sub-menu>
 
-        <div :class="['menu-item', { active: isActive('/admin/logs') }]" @click="navigate('/admin/logs')">
-          <el-icon><Document /></el-icon>
-          <span v-if="!isCollapse">操作日志</span>
-        </div>
-      </div>
+        <!-- 系统维护 -->
+        <el-sub-menu index="system-group">
+          <template #title>
+            <el-icon><Monitor /></el-icon>
+            <span>系统维护</span>
+          </template>
+          <el-menu-item index="/admin/logs" @click="nav('/admin/logs')">操作日志</el-menu-item>
+          <el-menu-item index="/admin/database" @click="nav('/admin/database')">数据库维护</el-menu-item>
+        </el-sub-menu>
+      </el-menu>
     </el-aside>
 
     <!-- 主内容区 -->
@@ -84,7 +119,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
@@ -97,11 +132,14 @@ const userStore = useUserStore()
 const themeStore = useThemeStore()
 const isCollapse = ref(false)
 
-function navigate(path) {
+const activeMenu = computed(() => {
+  const p = route.path
+  if (p.startsWith('/review')) return '/review/workbench'
+  return p
+})
+
+function nav(path) {
   if (route.path !== path) router.push(path).catch(() => {})
-}
-function isActive(path) {
-  return route.path === path || route.path.startsWith(path + '/')
 }
 
 function handleLogout() {
@@ -118,6 +156,8 @@ function handleLogout() {
   background: var(--sidebar-bg);
   overflow: hidden;
   transition: width 0.3s;
+  display: flex;
+  flex-direction: column;
 }
 .logo {
   height: 60px;
@@ -129,6 +169,28 @@ function handleLogout() {
   font-weight: bold;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+.sidebar-menu {
+  border-right: none !important;
+  flex: 1;
+  overflow-y: auto;
+}
+.sidebar-menu .el-menu-item {
+  height: 48px;
+  line-height: 48px;
+}
+.sidebar-menu .el-sub-menu .el-menu-item {
+  height: 44px;
+  line-height: 44px;
+  min-width: auto;
+}
+.sidebar-menu .el-menu-item:hover,
+.sidebar-menu .el-sub-menu__title:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+.sidebar-menu .el-menu-item.is-active {
+  background: rgba(64, 158, 255, 0.12) !important;
 }
 .header {
   display: flex;
@@ -147,18 +209,4 @@ function handleLogout() {
 .theme-toggle { cursor: pointer; color: var(--text-secondary); }
 .theme-toggle:hover { color: var(--text-color); }
 .el-main { background: var(--bg-color); padding: 20px; }
-
-.sidebar-menu { padding: 8px 0; }
-.menu-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 20px; color: #bfcbd9; cursor: pointer;
-  font-size: 14px; transition: all 0.2s;
-}
-.menu-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
-.menu-item.active { color: #409EFF; background: rgba(64,158,255,0.1); }
-.menu-item.sub { padding-left: 48px; font-size: 13px; }
-.menu-group-title {
-  padding: 12px 20px 4px; font-size: 12px;
-  color: rgba(255,255,255,0.4); text-transform: uppercase;
-}
 </style>

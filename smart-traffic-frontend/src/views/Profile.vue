@@ -9,9 +9,6 @@
         <el-form-item label="用户名">
           <el-input v-model="form.username" disabled />
         </el-form-item>
-        <el-form-item label="真实姓名" prop="realname">
-          <el-input v-model="form.realname" />
-        </el-form-item>
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="form.phone" />
         </el-form-item>
@@ -58,11 +55,10 @@ const submitting = ref(false)
 const showPasswordDialog = ref(false)
 const formRef = ref(null)
 
-const form = reactive({ username: '', realname: '', phone: '' })
+const form = reactive({ username: '', phone: '' })
 const pwdForm = reactive({ oldPassword: '', newPassword: '', rePassword: '' })
 
 const rules = {
-  realname: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   phone: [{ required: true, pattern: /^1\d{10}$/, message: '请输入正确手机号', trigger: 'blur' }]
 }
 
@@ -85,7 +81,7 @@ async function handleSave() {
   if (!valid) return
   submitting.value = true
   try {
-    await updateProfile({ realname: form.realname, phone: form.phone })
+    await updateProfile({ phone: form.phone })
     ElMessage.success('保存成功')
   } catch { /* handled */ }
   finally { submitting.value = false }
@@ -99,7 +95,7 @@ async function handleChangePwd() {
     return ElMessage.warning('两次密码不一致')
   }
   try {
-    await changePassword(pwdForm)
+    await changePassword({ old_password: pwdForm.oldPassword, new_password: pwdForm.newPassword })
     ElMessage.success('密码修改成功，请重新登录')
     showPasswordDialog.value = false
     userStore.logout()

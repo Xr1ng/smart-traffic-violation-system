@@ -73,7 +73,6 @@
           <el-tag :type="aiTagType(item.ai_review.conclusion)" size="small" effect="dark">
             {{ aiConclusionText(item.ai_review.conclusion) }}
           </el-tag>
-          <span class="ai-mode">{{ item.ai_review.review_mode === 'vision_llm' ? '多模态复核' : 'AI 初审' }}</span>
           <span class="ai-confidence">置信度 {{ (item.ai_review.ai_confidence * 100).toFixed(0) }}%</span>
         </div>
         <div class="card-footer" v-else>

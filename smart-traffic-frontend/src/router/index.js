@@ -106,7 +106,7 @@ const routes = [
   {
     path: '/stats',
     component: () => import('@/layouts/ReviewLayout.vue'),
-    meta: { requiresAuth: true, roles: ['reviewer'] },
+    meta: { requiresAuth: true, roles: ['reviewer', 'admin'] },
     children: [
       {
         path: '',
@@ -147,12 +147,6 @@ const routes = [
         name: 'AdminUsers',
         component: () => import('@/views/admin/UserManage.vue'),
         meta: { title: '用户管理' }
-      },
-      {
-        path: 'roles',
-        name: 'AdminRoles',
-        component: () => import('@/views/admin/RoleManage.vue'),
-        meta: { title: '角色权限' }
       },
       {
         path: 'cameras',
@@ -213,18 +207,6 @@ const routes = [
         name: 'AdminDrivers',
         component: () => import('@/views/admin/DriverList.vue'),
         meta: { title: '驾驶人管理' }
-      },
-      {
-        path: 'search',
-        name: 'AdminAdvancedSearch',
-        component: () => import('@/views/admin/AdvancedSearch.vue'),
-        meta: { title: '高级搜索' }
-      },
-      {
-        path: 'system-logs',
-        name: 'AdminSystemLogs',
-        component: () => import('@/views/admin/SystemLog.vue'),
-        meta: { title: '系统日志' }
       },
       {
         path: 'database',
