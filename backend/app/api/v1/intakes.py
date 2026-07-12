@@ -62,6 +62,7 @@ def admin_upload(
 def camera_capture(
     image: UploadFile = File(...),
     location_text: str = Form(None),
+    captured_at: datetime | None = Form(None),
     speed: float | None = Form(None),
     db: Session = Depends(get_db),
     device: CameraDevice = Depends(get_camera_device),
@@ -71,6 +72,7 @@ def camera_capture(
         db, source_type="camera", source_id=device.id,
         image_bytes=data, filename=image.filename or "capture.jpg",
         location_text=location_text or device.location_text,
+        captured_at=captured_at,
         speed=speed,
     )
     return _to_response(case)

@@ -46,6 +46,20 @@ def list_cases(status: str | None = None, source_type: str | None = None,
             )
             if original:
                 media["original_url"] = original.url
+        # 解析 AI 结果用于卡片展示
+        ai_review = None
+        if c.ai_result_json:
+            try:
+                import json
+                ai_raw = json.loads(c.ai_result_json)
+                if ai_raw.get("conclusion"):
+                    cn_map = {"suggest_approve": "建议通过", "need_review": "需人工审核", "suggest_reject": "建议驳回"}
+                    ai_review = {
+                        "conclusion": cn_map.get(ai_raw["conclusion"], ai_raw["conclusion"]),
+                        "ai_confidence": ai_raw.get("ai_confidence"),
+                    }
+            except (json.JSONDecodeError, TypeError):
+                pass
         items.append(CaseListItem(
             id=c.id,
             case_no=c.case_no, status=c.status,
@@ -57,6 +71,7 @@ def list_cases(status: str | None = None, source_type: str | None = None,
             location_text=ev.location_text if ev else None,
             media=media,
             reward=reward_by_case.get(c.id),
+            ai_review=ai_review,
         ))
     return CaseListResponse(items=items, total=res["total"], page=res["page"], page_size=res["page_size"])
 

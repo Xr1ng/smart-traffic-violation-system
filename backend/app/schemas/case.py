@@ -15,6 +15,7 @@ class CaseListItem(BaseModel):
     location_text: str | None = None
     media: dict = {}
     reward: int | None = None
+    ai_review: dict | None = None
 
 
 class CaseListResponse(BaseModel):

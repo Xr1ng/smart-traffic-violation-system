@@ -50,6 +50,7 @@
             <span>用户管理</span>
           </template>
           <el-menu-item index="/admin/users" @click="nav('/admin/users')">用户列表</el-menu-item>
+          <el-menu-item index="/admin/roles" @click="nav('/admin/roles')">角色权限</el-menu-item>
         </el-sub-menu>
 
         <!-- 设备管理 -->
