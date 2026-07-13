@@ -1,4 +1,5 @@
 # app/services/intake_service.py
+import threading
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -12,6 +13,27 @@ from app.services.storage import save_media
 
 def _gen_case_no(case_id: int) -> str:
     return f"CASE{datetime.now(timezone.utc):%Y%m%d}{case_id:06d}"
+
+
+def _run_ai_async(case_id: int, media_url: str):
+    """在独立线程+独立 DB session 中跑 AI 管线，不阻塞上传响应。"""
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        from app.core.db import SessionLocal
+        from app.services.ai_pipeline import run_ai_pipeline
+
+        db2 = SessionLocal()
+        try:
+            case = db2.get(Case, case_id)
+            if case is None:
+                logger.warning("AI async: case %s not found", case_id)
+                return
+            run_ai_pipeline(case, media_url)
+        finally:
+            db2.close()
+    except Exception:
+        logger.exception("AI async failed for case %s", case_id)
 
 
 def create_intake(
@@ -67,11 +89,7 @@ def create_intake(
     db.commit()
     db.refresh(case)
 
-    # 自动跑 AI 管线（异步风险：上传接口会多等几秒，但能保证结果入库）
-    try:
-        from app.services.ai_pipeline import run_ai_pipeline
-        run_ai_pipeline(case, url)
-    except Exception:
-        pass  # AI 失败不影响摄入
+    # AI 管线在后台线程异步跑，不阻塞上传响应
+    threading.Thread(target=_run_ai_async, args=(case.id, url), daemon=True).start()
 
     return case

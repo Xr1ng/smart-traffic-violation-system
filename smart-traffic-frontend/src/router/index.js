@@ -149,12 +149,6 @@ const routes = [
         meta: { title: '用户管理' }
       },
       {
-        path: 'roles',
-        name: 'AdminRoles',
-        component: () => import('@/views/admin/RoleManage.vue'),
-        meta: { title: '角色权限' }
-      },
-      {
         path: 'cameras',
         name: 'AdminCameras',
         component: () => import('@/views/admin/CameraManage.vue'),

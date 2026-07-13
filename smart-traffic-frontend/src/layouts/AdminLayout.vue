@@ -39,14 +39,10 @@
         </el-sub-menu>
 
         <!-- 用户管理 -->
-        <el-sub-menu index="user-group">
-          <template #title>
-            <el-icon><UserFilled /></el-icon>
-            <span>用户管理</span>
-          </template>
-          <el-menu-item index="/admin/users" @click="nav('/admin/users')">用户列表</el-menu-item>
-          <el-menu-item index="/admin/roles" @click="nav('/admin/roles')">角色权限</el-menu-item>
-        </el-sub-menu>
+        <el-menu-item index="/admin/users" @click="nav('/admin/users')">
+          <el-icon><UserFilled /></el-icon>
+          <template #title>用户管理</template>
+        </el-menu-item>
 
         <!-- 设备管理 -->
         <el-menu-item index="/admin/cameras" @click="nav('/admin/cameras')">
@@ -61,7 +57,6 @@
             <span>系统配置</span>
           </template>
           <el-menu-item index="/admin/rules" @click="nav('/admin/rules')">违章规则</el-menu-item>
-          <el-menu-item index="/admin/sms-templates" @click="nav('/admin/sms-templates')">短信模板</el-menu-item>
           <el-menu-item index="/admin/announcements" @click="nav('/admin/announcements')">公告管理</el-menu-item>
         </el-sub-menu>
 
