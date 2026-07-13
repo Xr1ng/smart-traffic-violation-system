@@ -22,6 +22,7 @@ celerybeat-schedule
 # Personal working documents (not for repo)
 *.docx
 docs/implementation-guide.md
+docs/superpowers/
 团队任务分工.md
 
 # IDE
