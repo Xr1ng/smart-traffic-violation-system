@@ -45,20 +45,11 @@ def run_ai_pipeline(case: Case, image_relative_url: str) -> dict:
     result = {"model_version": "", "objects": [], "vehicle_bbox": None,
               "plate_bbox": None, "annotated_image_url": None,
               "plate_no": None, "ocr_engine": "无", "ocr_status": "不可用",
-              "rule_matched": False, "evidence_level": "不足",
-              "candidate_violation_type": "未识别",
+              "rule_matched": False, "evidence_level": "insufficient",
+              "candidate_violation_type": None,
               "rule_code": "illegal_stop_model",
               "evidence_items": [], "missing_evidence": [], "rule_reason": "",
-              "conclusion": "需人工审核", "ai_confidence": None, "review_reason": ""}
-
-    # 证据项英文→中文映射
-    _EVIDENCE_CN = {
-        "illegal_stop detection": "违停检测",
-        "vehicle detection": "车辆检测",
-        "plate OCR": "车牌识别",
-        "plate OCR text": "车牌文字识别",
-        "license plate region": "车牌定位",
-    }
+              "conclusion": "need_review", "ai_confidence": None, "review_reason": ""}
 
     try:
         # ① YOLO 检测
@@ -104,11 +95,10 @@ def run_ai_pipeline(case: Case, image_relative_url: str) -> dict:
         )
         result["rule_matched"] = rule.rule_matched
         result["evidence_level"] = rule.evidence_level
-        # 翻译证据项
-        result["evidence_items"] = [_EVIDENCE_CN.get(e, e) for e in rule.evidence_items]
-        result["missing_evidence"] = [_EVIDENCE_CN.get(e, e) for e in rule.missing_evidence]
+        result["evidence_items"] = rule.evidence_items
+        result["missing_evidence"] = rule.missing_evidence
         result["rule_reason"] = rule.reason
-        result["candidate_violation_type"] = rule.candidate_violation_type or "违停"
+        result["candidate_violation_type"] = rule.candidate_violation_type or "illegal_stop"
         result["rule_code"] = rule.rule_code or "illegal_stop_model"
 
         # ④ LLM 审查
@@ -124,9 +114,7 @@ def run_ai_pipeline(case: Case, image_relative_url: str) -> dict:
                 "evidence_items": result["evidence_items"],
             },
         })
-        # 结论中文映射
-        _CONCLUSION_CN = {"suggest_approve": "建议通过", "need_review": "需人工审核", "suggest_reject": "建议驳回"}
-        result["conclusion"] = _CONCLUSION_CN.get(review.conclusion, review.conclusion)
+        result["conclusion"] = review.conclusion
         result["ai_confidence"] = review.ai_confidence
         result["review_reason"] = review.reason
         result["risk_points"] = review.risk_points

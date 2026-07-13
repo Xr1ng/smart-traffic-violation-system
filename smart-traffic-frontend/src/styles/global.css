@@ -194,3 +194,33 @@ a {
   }
 }
 
+@media print {
+  html,
+  body,
+  #app,
+  .admin-layout,
+  .review-layout {
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  .admin-layout > .aside,
+  .review-layout > .aside,
+  .admin-layout .header,
+  .review-layout .header {
+    display: none !important;
+  }
+
+  .admin-layout > .el-container,
+  .review-layout > .el-container {
+    display: block;
+  }
+
+  .admin-layout .el-main,
+  .review-layout .el-main {
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+}

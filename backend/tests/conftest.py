@@ -22,6 +22,12 @@ test_engine = create_engine(
 TestSessionLocal = sessionmaker(bind=test_engine, autoflush=False, autocommit=False)
 
 
+@pytest.fixture(autouse=True)
+def isolate_ai_runtime(monkeypatch):
+    monkeypatch.setattr(settings, "AI_PROVIDER", "stub")
+    monkeypatch.setattr("app.services.intake_service._enqueue_ai_pipeline", lambda *_args: None)
+
+
 @pytest.fixture()
 def db() -> Session:
     Base.metadata.create_all(bind=test_engine)

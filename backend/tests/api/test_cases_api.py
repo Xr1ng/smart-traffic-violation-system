@@ -3,9 +3,11 @@ JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 10
 
 
 def test_list_cases_reviewer(client, reviewer_user, pending_case, reviewer_auth_headers):
+    pending_case.violation_type = "illegal_stop"
     r = client.get("/api/v1/cases", headers=reviewer_auth_headers)
     assert r.status_code == 200
-    assert any(c["case_no"] == "CASE-PEND-1" for c in r.json()["items"])
+    item = next(c for c in r.json()["items"] if c["case_no"] == "CASE-PEND-1")
+    assert item["violation_type"] == "违停"
 
 
 def test_list_cases_includes_source_description_media_and_reward(

@@ -566,12 +566,32 @@ citizen 只能看自己的；admin 可看任意。查他人→403。
 
 ```json
 // 请求
-{ "start_time": "2026-01-01", "end_time": "2026-07-01", "report_type": "综合" }
-// 全 optional
+{ "start_time": "2026-07-01T00:00:00+08:00", "end_time": "2026-07-31T23:59:59+08:00" }
+// 两个时间均必填；开始时间不得晚于结束时间，跨度不得超过 366 天
 
-// 200 (stub)
-{ "title": "交通违章分析报告 (综合)", "content": "...", "author": "AI 分析助手 (stub)", "generated_at": "..." }
+// 200
+{
+  "title": "交通违章综合分析报告",
+  "start_time": "2026-06-30T16:00:00Z",
+  "end_time": "2026-07-31T15:59:59Z",
+  "summary": "...",
+  "trend_analysis": "...",
+  "hotspot_analysis": "...",
+  "risk_alerts": ["..."],
+  "recommendations": ["..."],
+  "statistics_snapshot": {
+    "overview": {},
+    "trend": [],
+    "violation_types": [],
+    "locations": [],
+    "road_time_hotspots": []
+  },
+  "author": "AI 分析助手",
+  "generated_at": "2026-07-13T06:00:00Z"
+}
 ```
+
+非法日期范围返回 `422`；LLM 未配置、超时或返回格式无效时返回 `503`。
 
 ---
 

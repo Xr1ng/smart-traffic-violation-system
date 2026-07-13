@@ -36,6 +36,10 @@ def _run_ai_async(case_id: int, media_url: str):
         logger.exception("AI async failed for case %s", case_id)
 
 
+def _enqueue_ai_pipeline(case_id: int, media_url: str) -> None:
+    threading.Thread(target=_run_ai_async, args=(case_id, media_url), daemon=True).start()
+
+
 def create_intake(
     db: Session,
     *,
@@ -90,6 +94,6 @@ def create_intake(
     db.refresh(case)
 
     # AI 管线在后台线程异步跑，不阻塞上传响应
-    threading.Thread(target=_run_ai_async, args=(case.id, url), daemon=True).start()
+    _enqueue_ai_pipeline(case.id, url)
 
     return case

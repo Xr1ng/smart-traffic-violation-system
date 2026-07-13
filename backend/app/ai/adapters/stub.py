@@ -6,7 +6,9 @@ from app.ai.adapters.base import (
     AIReviewResultData,
     DetectionResult,
     LLMProvider,
+    LLMReportError,
     OcrEngine,
+    ReportNarrativeData,
     RuleEvaluator,
     RuleResult,
     YoloDetector,
@@ -69,10 +71,13 @@ class StubRuleEvaluator(RuleEvaluator):
 class StubLLMProvider(LLMProvider):
     def review(self, evidence_payload: dict) -> AIReviewResultData:
         return AIReviewResultData(
-            conclusion="建议通过",
+            conclusion="suggest_approve",
             ai_confidence=0.88,
             reason="证据链完整，建议通过",
             risk_points=[],
             missing_evidence=[],
             prompt_version="stub-v1",
         )
+
+    def generate_report(self, statistics_payload: dict) -> ReportNarrativeData:
+        raise LLMReportError("LLM 未配置，无法生成分析报告")

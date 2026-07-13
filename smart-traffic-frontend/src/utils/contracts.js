@@ -102,6 +102,27 @@ export function reportPathForRoute(path) {
   return path.startsWith('/admin/') ? '/admin/stats/report' : '/stats/report'
 }
 
+export function buildReportRequest(dateRange) {
+  if (!Array.isArray(dateRange) || dateRange.length !== 2) {
+    throw new TypeError('报告日期范围必须包含开始和结束日期')
+  }
+  const start = new Date(dateRange[0])
+  const end = new Date(dateRange[1])
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw new TypeError('报告日期范围无效')
+  }
+  start.setHours(0, 0, 0, 0)
+  end.setHours(23, 59, 59, 999)
+  return { start_time: start.toISOString(), end_time: end.toISOString() }
+}
+
+export function buildReportRoute(path, dateRange) {
+  return {
+    path: reportPathForRoute(path),
+    query: buildReportRequest(dateRange)
+  }
+}
+
 export function caseAiFallbackText(status) {
   return ['detecting', 'ai_reviewing'].includes(status) ? 'AI 处理中...' : '暂无 AI 结果'
 }

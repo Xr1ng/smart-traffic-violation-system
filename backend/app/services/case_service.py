@@ -9,6 +9,29 @@ from app.models.intake import Case, IntakeEvent
 from app.models.user import User
 
 
+AI_DISPLAY_TEXT = {
+    "illegal_stop detection": "违停检测",
+    "vehicle detection": "车辆检测",
+    "plate OCR": "车牌识别",
+    "plate OCR text": "车牌文字识别",
+    "license plate region": "车牌定位",
+    "plate recognition": "车牌识别",
+    "plate localization": "车牌定位",
+    "plate text recognition": "车牌文字识别",
+    "illegal_stop": "违停",
+    "complete": "完整",
+    "partial": "部分",
+    "insufficient": "不足",
+    "suggest_approve": "建议通过",
+    "need_review": "需人工审核",
+    "suggest_reject": "建议驳回",
+}
+
+
+def ai_display_text(value: str | None) -> str | None:
+    return AI_DISPLAY_TEXT.get(value, value)
+
+
 class CaseService:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -89,17 +112,6 @@ class CaseService:
             except (json.JSONDecodeError, TypeError):
                 ai_raw = None
 
-        # 旧数据英文→中文兼容映射
-        _CN = {
-            "illegal_stop detection": "违停检测",
-            "vehicle detection": "车辆检测",
-            "plate OCR": "车牌识别",
-            "plate OCR text": "车牌文字识别",
-            "license plate region": "车牌定位",
-            "complete": "完整", "partial": "部分", "insufficient": "不足",
-            "suggest_approve": "建议通过", "need_review": "需人工审核", "suggest_reject": "建议驳回",
-        }
-
         detection_result = None
         rule_result = None
         ai_review = None
@@ -124,20 +136,22 @@ class CaseService:
                     "model_version": ai_raw.get("model_version"),
                 }
             if ai_raw.get("rule_matched") is not None:
-                evidence_items = [_CN.get(e, e) for e in ai_raw.get("evidence_items", [])]
-                missing = [_CN.get(e, e) for e in ai_raw.get("missing_evidence", [])]
+                evidence_items = [ai_display_text(e) for e in ai_raw.get("evidence_items", [])]
+                missing = [ai_display_text(e) for e in ai_raw.get("missing_evidence", [])]
                 rule_result = {
-                    "candidate_violation_type": ai_raw.get("candidate_violation_type", "违停"),
+                    "candidate_violation_type": ai_display_text(
+                        ai_raw.get("candidate_violation_type", "illegal_stop")
+                    ),
                     "rule_code": ai_raw.get("rule_code", "illegal_stop_model"),
                     "rule_matched": ai_raw["rule_matched"],
-                    "evidence_level": _CN.get(ai_raw.get("evidence_level", ""), ai_raw.get("evidence_level", "")),
+                    "evidence_level": ai_display_text(ai_raw.get("evidence_level", "")),
                     "evidence_items": evidence_items,
                     "missing_evidence": missing,
                     "reason": ai_raw.get("rule_reason", ""),
                 }
             if ai_raw.get("conclusion"):
                 ai_review = {
-                    "conclusion": _CN.get(ai_raw["conclusion"], ai_raw["conclusion"]),
+                    "conclusion": ai_display_text(ai_raw["conclusion"]),
                     "ai_confidence": ai_raw.get("ai_confidence"),
                     "reason": ai_raw.get("review_reason", ""),
                     "risk_points": ai_raw.get("risk_points", []),
@@ -151,7 +165,8 @@ class CaseService:
             "location_text": location_text,
             "captured_at": captured_at,
             "speed": speed,
-            "plate_no": case.plate_no, "violation_type": case.violation_type,
+            "plate_no": case.plate_no,
+            "violation_type": ai_display_text(case.violation_type),
             "media": media,
             "detection_result": detection_result,
             "rule_result": rule_result,

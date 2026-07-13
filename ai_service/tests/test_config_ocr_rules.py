@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from ai_service.traffic_ai.config import ModelPaths, RuntimePaths, ensure_runtime_environment
+from ai_service.traffic_ai.config import ModelPaths, RuntimePaths, ensure_runtime_environment, project_root
 from ai_service.traffic_ai.ocr import (
     CHINESE_PLATE_PROVINCES,
     NoopOcrEngine,
@@ -39,7 +39,7 @@ class ConfigOcrRulesTest(unittest.TestCase):
     def test_default_runtime_paths_stay_inside_repo_root(self):
         runtime = RuntimePaths.default()
 
-        self.assertEqual(runtime.root.name, "smart-traffic-violation-system")
+        self.assertEqual(runtime.root, project_root())
         self.assertEqual(runtime.tmp_dir.parent, runtime.root)
         self.assertEqual(runtime.yolo_config_dir.parent, runtime.root)
         self.assertTrue(runtime.paddlex_cache_dir.name.endswith("paddlex"))

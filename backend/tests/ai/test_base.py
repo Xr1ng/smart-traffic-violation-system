@@ -1,6 +1,7 @@
 from app.ai.adapters.base import (
     AIReviewResultData,
     DetectionResult,
+    ReportNarrativeData,
     RuleResult,
 )
 
@@ -41,3 +42,15 @@ def test_ai_review_result_data_construction():
         prompt_version="v1",
     )
     assert r.conclusion == "suggest_approve"
+
+
+def test_report_narrative_data_validates_sections():
+    result = ReportNarrativeData(
+        summary="本期共发现 3 起违章。",
+        trend_analysis="违章数量总体平稳。",
+        hotspot_analysis="人民路为高发地点。",
+        risk_alerts=["晚高峰风险较高"],
+        recommendations=["加强晚高峰巡查"],
+    )
+
+    assert result.risk_alerts == ["晚高峰风险较高"]

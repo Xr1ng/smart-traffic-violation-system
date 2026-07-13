@@ -9,7 +9,12 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
-from app.ai.adapters.base import AIReviewResultData, LLMProvider
+from app.ai.adapters.base import (
+    AIReviewResultData,
+    LLMProvider,
+    LLMReportError,
+    ReportNarrativeData,
+)
 
 PostJson = Callable[[str, dict[str, str], dict, float], dict]
 
@@ -56,6 +61,43 @@ class OpenAICompatibleLLMProvider(LLMProvider):
                 missing_evidence=[],
                 prompt_version="openai-compatible-fallback-v1",
             )
+
+    def generate_report(self, statistics_payload: dict) -> ReportNarrativeData:
+        try:
+            data = self._post_json(
+                f"{self.base_url}/chat/completions",
+                {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                {
+                    "model": self.text_model,
+                    "temperature": 0.2,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "你是交通管理数据分析助手。只能依据提供的聚合统计数据生成中文报告，"
+                                "不得编造增长率、地点、治理成效或未提供的事实。数据不足时必须明确说明。"
+                                "只输出 JSON，且必须包含 summary、trend_analysis、hotspot_analysis、"
+                                "risk_alerts、recommendations 五个字段；后两个字段必须为字符串数组。"
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": (
+                                "请生成交通违章综合分析报告的结构化正文。聚合统计 JSON：\n"
+                                f"{json.dumps(statistics_payload, ensure_ascii=False, default=str)}"
+                            ),
+                        },
+                    ],
+                },
+                self.timeout_seconds,
+            )
+            content = data["choices"][0]["message"]["content"]
+            return ReportNarrativeData.model_validate(_loads_json_object(content))
+        except Exception as exc:
+            raise LLMReportError("LLM 报告生成失败") from exc
 
     def _build_chat_payload(self, evidence_payload: dict) -> dict:
         image_path = _find_image_path(evidence_payload) if self.mode == "vision" else None

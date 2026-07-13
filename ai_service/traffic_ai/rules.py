@@ -11,31 +11,31 @@ class IllegalStopRuleEvaluator:
                 candidate_violation_type=None,
                 rule_code="illegal_stop_model",
                 rule_matched=False,
-                evidence_level="不足",
+                evidence_level="insufficient",
                 evidence_items=[],
-                missing_evidence=["违停检测"],
+                missing_evidence=["illegal_stop detection"],
                 reason="未检测到违停目标",
             )
 
-        evidence = ["违停检测"]
+        evidence = ["illegal_stop detection"]
         missing: list[str] = []
         if detections.vehicle:
-            evidence.append("车辆检测")
+            evidence.append("vehicle detection")
         else:
-            missing.append("车辆检测")
+            missing.append("vehicle detection")
         if plate_text:
-            evidence.append("车牌识别")
+            evidence.append("plate recognition")
         elif detections.license_plate:
-            evidence.append("车牌定位")
-            missing.append("车牌文字识别")
+            evidence.append("plate localization")
+            missing.append("plate text recognition")
         else:
-            missing.append("车牌定位")
+            missing.append("plate localization")
 
         return RuleResult(
-            candidate_violation_type="违停",
+            candidate_violation_type="illegal_stop",
             rule_code="illegal_stop_model",
             rule_matched=True,
-            evidence_level="完整" if not missing else "部分",
+            evidence_level="complete" if not missing else "partial",
             evidence_items=evidence,
             missing_evidence=missing,
             reason="违停模型检测到违章停车目标",
@@ -43,7 +43,7 @@ class IllegalStopRuleEvaluator:
 
 
 def review_from_rule(rule: RuleResult) -> ReviewResult:
-    if rule.rule_matched and rule.evidence_level == "完整":
+    if rule.rule_matched and rule.evidence_level == "complete":
         return ReviewResult(
             conclusion="suggest_approve",
             confidence=0.85,

@@ -302,6 +302,23 @@ smart-traffic-violation-system/
    ```
 6. **登录**：用 `admin / admin1234`。
 
+### 启用 LLM 分析报告
+
+统计分析页支持按日期范围汇总真实业务数据，并由 OpenAI-compatible 文本模型生成结构化中文报告。报告可在浏览器中打印或另存为 PDF，不会保存到数据库。
+
+在 `backend/.env` 中配置：
+
+```env
+AI_PROVIDER=local
+LLM_PROVIDER=zhipu
+LLM_API_KEY=替换为实际密钥
+LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+LLM_TEXT_MODEL=glm-5.1
+LLM_TIMEOUT_SECONDS=30
+```
+
+`LLM_PROVIDER` 也可填写 `openai_compatible` 并配套修改地址与模型。未配置真实 LLM 时，报告接口会返回服务不可用提示，不会生成占位报告。
+
 ---
 
 ## 🚀 开发路线

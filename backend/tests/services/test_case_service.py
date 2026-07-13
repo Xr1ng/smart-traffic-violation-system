@@ -1,4 +1,6 @@
 # tests/services/test_case_service.py
+import json
+
 import pytest
 from fastapi import HTTPException
 
@@ -41,6 +43,28 @@ def test_get_case_detail_reviewer_can_read(db, reviewer_user, pending_case):
     svc = CaseService(db)
     d = svc.get_case_detail(pending_case.id, user=reviewer_user)
     assert d["case_no"] == "CASE-PEND-1"  # reviewer 不抛 403
+
+
+def test_get_case_detail_translates_local_ai_contract_for_display(db, reviewer_user, pending_case):
+    pending_case.violation_type = "illegal_stop"
+    pending_case.ai_result_json = json.dumps({
+        "rule_matched": True,
+        "candidate_violation_type": "illegal_stop",
+        "evidence_level": "partial",
+        "evidence_items": ["illegal_stop detection", "plate localization"],
+        "missing_evidence": ["plate text recognition"],
+        "conclusion": "need_review",
+    })
+    db.commit()
+
+    detail = CaseService(db).get_case_detail(pending_case.id, user=reviewer_user)
+
+    assert detail["violation_type"] == "违停"
+    assert detail["rule_result"]["candidate_violation_type"] == "违停"
+    assert detail["rule_result"]["evidence_items"] == ["违停检测", "车牌定位"]
+    assert detail["rule_result"]["missing_evidence"] == ["车牌文字识别"]
+    assert detail["rule_result"]["evidence_level"] == "部分"
+    assert detail["ai_review"]["conclusion"] == "需人工审核"
 
 
 def test_get_case_detail_citizen_other_403(db, pending_case, seeded_roles):

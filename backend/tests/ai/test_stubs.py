@@ -1,4 +1,6 @@
-from app.ai.adapters.base import DetectionResult
+import pytest
+
+from app.ai.adapters.base import DetectionResult, LLMReportError
 from app.ai.adapters.stub import (
     StubLLMProvider,
     StubOcrEngine,
@@ -64,3 +66,8 @@ def test_stub_llm_review():
     assert r.conclusion == "suggest_approve"
     assert r.ai_confidence == 0.88
     assert r.prompt_version == "stub-v1"
+
+
+def test_stub_llm_report_is_explicitly_unavailable():
+    with pytest.raises(LLMReportError, match="未配置"):
+        StubLLMProvider().generate_report({"overview": {"total_violations": 0}})

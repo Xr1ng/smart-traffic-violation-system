@@ -9,7 +9,7 @@ from app.models.violation import Reward
 from app.schemas.case import (
     ApproveRequest, CaseDetail, CaseListResponse, CaseListItem, RejectRequest, RecheckResponse,
 )
-from app.services.case_service import CaseService
+from app.services.case_service import CaseService, ai_display_text
 from app.services.notification_provider import NotificationProvider
 from app.services.review_service import ReviewService
 
@@ -66,7 +66,7 @@ def list_cases(status: str | None = None, source_type: str | None = None,
             source_type=ev.source_type if ev else None,
             source_desc=source_desc_map.get(ev.source_type, "") if ev else "",
             description=ev.description if ev else None,
-            plate_no=c.plate_no, violation_type=c.violation_type,
+            plate_no=c.plate_no, violation_type=ai_display_text(c.violation_type),
             captured_at=str(ev.captured_at) if ev and ev.captured_at else None,
             location_text=ev.location_text if ev else None,
             media=media,

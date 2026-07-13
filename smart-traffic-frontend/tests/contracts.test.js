@@ -7,6 +7,8 @@ import * as contracts from '../src/utils/contracts.js'
 import {
   buildApprovePayload,
   buildRejectPayload,
+  buildReportRequest,
+  buildReportRoute,
   buildViolationQuery,
   caseAiFallbackText,
   fetchAllCitizenCases,
@@ -217,6 +219,23 @@ test('keeps admin report navigation inside admin routes', () => {
   assert.equal(reportPathForRoute('/stats'), '/stats/report')
 })
 
+test('carries the selected full-day range into the report route', () => {
+  const route = buildReportRoute('/admin/stats', [
+    new Date('2026-07-01T08:30:00+08:00'),
+    new Date('2026-07-31T12:00:00+08:00')
+  ])
+
+  assert.equal(route.path, '/admin/stats/report')
+  assert.deepEqual(route.query, {
+    start_time: '2026-06-30T16:00:00.000Z',
+    end_time: '2026-07-31T15:59:59.999Z'
+  })
+  assert.deepEqual(buildReportRequest([
+    new Date('2026-07-01T08:30:00+08:00'),
+    new Date('2026-07-31T12:00:00+08:00')
+  ]), route.query)
+})
+
 test('describes missing AI results according to case processing state', () => {
   assert.equal(caseAiFallbackText('detecting'), 'AI 处理中...')
   assert.equal(caseAiFallbackText('ai_reviewing'), 'AI 处理中...')
@@ -385,9 +404,16 @@ test('admin violations keep real actions and remove fake bulk and delete operati
   assert.doesNotMatch(source, /批量导出|handleBatchExport|handleDelete|确定删除/)
 })
 
-test('AI report page is a neutral unavailable state without fake generation or export', async () => {
+test('AI report page generates only on user action and supports print export', async () => {
   const source = await readFile(new URL('../src/views/stats/Report.vue', import.meta.url), 'utf8')
+  const dashboardSource = await readFile(new URL('../src/views/stats/Dashboard.vue', import.meta.url), 'utf8')
+  const apiSource = await readFile(new URL('../src/api/statistics.js', import.meta.url), 'utf8')
 
-  assert.match(source, /AI 分析模块暂未接入/)
-  assert.doesNotMatch(source, /generateReportApi|报告已生成|导出 PDF|正在导出 PDF/)
+  assert.match(source, /@click="handleGenerate"/)
+  assert.match(source, /generateReportApi/)
+  assert.match(source, /window\.print\(\)/)
+  assert.match(source, /@media print/)
+  assert.doesNotMatch(source, /onMounted\([^)]*handleGenerate/)
+  assert.match(dashboardSource, /buildReportRoute\(route\.path, dateRange\)/)
+  assert.match(apiSource, /analysis\/reports[^\n]+timeout: 35000/)
 })

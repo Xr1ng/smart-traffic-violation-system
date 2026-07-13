@@ -8,7 +8,7 @@
           <el-button :type="period === '7d' ? 'primary' : ''" size="small" @click="setPeriod('7d')">近7天</el-button>
           <el-button :type="period === '30d' ? 'primary' : ''" size="small" @click="setPeriod('30d')">近30天</el-button>
         </el-button-group>
-        <el-button type="primary" size="small" @click="router.push(reportPathForRoute(route.path))">
+        <el-button type="primary" size="small" @click="router.push(buildReportRoute(route.path, dateRange))">
           <el-icon><Document /></el-icon>生成报告
         </el-button>
       </div>
@@ -65,13 +65,16 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchOverview, fetchByTime, fetchByType, fetchByLocation, fetchRoadTimeHeatmap } from '@/api/statistics'
-import { mapNamedSeries, reportPathForRoute } from '@/utils/contracts'
+import { buildReportRoute, mapNamedSeries } from '@/utils/contracts'
 import * as echarts from 'echarts'
 import { WarningFilled, TrendCharts, List, DataAnalysis, Checked, Collection, Document } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
-const dateRange = ref([])
+const initialEnd = new Date()
+const initialStart = new Date()
+initialStart.setDate(initialStart.getDate() - 29)
+const dateRange = ref([initialStart, initialEnd])
 const period = ref('30d')
 
 const trendChart = ref(null)
