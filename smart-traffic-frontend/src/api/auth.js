@@ -9,3 +9,5 @@ export const getUserInfo = () => request.get('/auth/me')
 export const updateProfile = (data) => request.put('/auth/profile', data)
 export const changePassword = (data) => request.put('/auth/password', data)
 export const getMenus = () => request.get('/permissions/menus')
+
+

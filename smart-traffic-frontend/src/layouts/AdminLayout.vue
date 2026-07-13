@@ -16,21 +16,16 @@
         active-text-color="#409EFF"
         class="sidebar-menu"
       >
-        <!-- 数据概览 -->
-        <el-menu-item index="/admin/stats" @click="nav('/admin/stats')">
-          <el-icon><TrendCharts /></el-icon>
-          <template #title>统计分析</template>
-        </el-menu-item>
-
         <!-- 违章管理 -->
         <el-sub-menu index="violation-group">
           <template #title>
             <el-icon><WarningFilled /></el-icon>
             <span>违章管理</span>
           </template>
+          <el-menu-item index="/admin/violations/upload" @click="nav('/admin/violations/upload')">证据上传</el-menu-item>
+          <el-menu-item index="/admin/violations/review" @click="nav('/admin/violations/review')">案件审核</el-menu-item>
           <el-menu-item index="/admin/violations" @click="nav('/admin/violations')">违章列表</el-menu-item>
-          <el-menu-item index="/admin/violations/upload" @click="nav('/admin/violations/upload')">违章上传</el-menu-item>
-          <el-menu-item index="/review/workbench" @click="nav('/review/workbench')">案件审核</el-menu-item>
+          <el-menu-item index="/admin/stats" @click="nav('/admin/stats')">统计分析</el-menu-item>
         </el-sub-menu>
 
         <!-- 车辆与驾驶人 -->
@@ -128,11 +123,7 @@ const userStore = useUserStore()
 const themeStore = useThemeStore()
 const isCollapse = ref(false)
 
-const activeMenu = computed(() => {
-  const p = route.path
-  if (p.startsWith('/review')) return '/review/workbench'
-  return p
-})
+const activeMenu = computed(() => route.path)
 
 function nav(path) {
   if (route.path !== path) router.push(path).catch(() => {})

@@ -18,8 +18,21 @@
           <el-form-item prop="repassword">
             <el-input v-model="form.repassword" type="password" placeholder="确认密码" prefix-icon="Lock" show-password />
           </el-form-item>
-          <el-form-item prop="phone">
-            <el-input v-model="form.phone" placeholder="手机号" prefix-icon="Phone" />
+          <el-form-item prop="email">
+            <el-input v-model="form.email" placeholder="请输入邮箱" />
+          </el-form-item>
+          <el-form-item prop="verification_code">
+            <div style="display:flex; gap:12px; width:100%">
+              <el-input v-model="form.verification_code" placeholder="请输入验证码" style="flex:1" />
+              <el-button
+                type="primary"
+                :disabled="countdown > 0 || !form.email"
+                style="width:120px"
+                @click="handleSendCode"
+              >
+                {{ countdown > 0 ? `${countdown}s 后重发` : '获取验证码' }}
+              </el-button>
+            </div>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" :loading="loading" style="width:100%" @click="handleRegister">
@@ -49,9 +62,13 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const formRef = ref(null)
 const loading = ref(false)
+const countdown = ref(0)
+
+// 前端模拟验证码：点击获取后生成随机 6 位数字
+const sentCode = ref('')
 
 const form = reactive({
-  username: '', password: '', repassword: '', phone: ''
+  username: '', password: '', repassword: '', email: '', verification_code: ''
 })
 
 const validateRepassword = (rule, value, callback) => {
@@ -66,20 +83,49 @@ const rules = {
     { required: true, message: '请确认密码', trigger: 'blur' },
     { validator: validateRepassword, trigger: 'blur' }
   ],
-  phone: [{ required: true, pattern: /^1\d{10}$/, message: '请输入正确的手机号', trigger: 'blur' }]
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  verification_code: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { len: 6, message: '验证码为6位数字', trigger: 'blur' }
+  ]
+}
+
+function handleSendCode() {
+  // 前端模拟生成验证码
+  const code = String(Math.floor(100000 + Math.random() * 900000))
+  sentCode.value = code
+  ElMessage.success(`验证码已发送：${code}（演示模式，后续对接后端邮件接口）`)
+  countdown.value = 60
+  const timer = setInterval(() => {
+    countdown.value--
+    if (countdown.value <= 0) clearInterval(timer)
+  }, 1000)
 }
 
 async function handleRegister() {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
 
+  // 前端验证码校验
+  if (form.verification_code !== sentCode.value) {
+    ElMessage.error('验证码错误')
+    return
+  }
+
   loading.value = true
   try {
-    await register({ username: form.username, password: form.password, phone: form.phone })
+    await register({
+      username: form.username,
+      password: form.password,
+      email: form.email
+    })
     ElMessage.success('注册成功，请登录')
     router.push('/login')
   } catch (err) {
-    ElMessage.error(err.response?.data?.message || '注册失败')
+    ElMessage.error(err.response?.data?.detail || '注册失败')
   } finally {
     loading.value = false
   }
@@ -87,7 +133,7 @@ async function handleRegister() {
 </script>
 
 <style scoped>
-:deep(.el-input__wrapper) {
+::v-deep(.el-input__wrapper) {
   border-radius: 12px !important;
   box-shadow: none !important;
   background: #f5f7fa !important;
@@ -96,31 +142,31 @@ async function handleRegister() {
   transition: all 0.3s ease;
 }
 
-:deep(.el-input__wrapper:hover) {
+::v-deep(.el-input__wrapper:hover) {
   border-color: #d0d7de !important;
 }
 
-:deep(.el-input__wrapper.is-focus) {
+::v-deep(.el-input__wrapper.is-focus) {
   border-color: #4a90e2 !important;
   box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1) !important;
 }
 
-:deep(.el-input__inner) {
+::v-deep(.el-input__inner) {
   height: 46px;
   font-size: 14px;
   color: #2d3748;
   background: transparent !important;
 }
 
-:deep(.el-input__inner::placeholder) {
+::v-deep(.el-input__inner::placeholder) {
   color: #a0aec0;
 }
 
-:deep(.el-select .el-input__wrapper) {
+::v-deep(.el-select .el-input__wrapper) {
   border-radius: 12px !important;
 }
 
-:deep(.el-button--primary) {
+::v-deep(.el-button--primary) {
   border-radius: 12px !important;
   height: 48px;
   font-size: 15px;
@@ -131,12 +177,12 @@ async function handleRegister() {
   transition: all 0.3s ease;
 }
 
-:deep(.el-button--primary:hover) {
+::v-deep(.el-button--primary:hover) {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4) !important;
 }
 
-:deep(.el-link) {
+::v-deep(.el-link) {
   font-weight: 500;
   font-size: 13px;
 }

@@ -185,10 +185,16 @@ const routes = [
         meta: { title: '违章上传' }
       },
       {
+        path: 'violations/review',
+        name: 'AdminCaseReview',
+        component: () => import('@/views/review/Workbench.vue'),
+        meta: { title: '案件审核' }
+      },
+      {
         path: 'violations/:id',
-        name: 'AdminViolationReview',
+        name: 'AdminViolationDetail',
         component: () => import('@/views/admin/ViolationReview.vue'),
-        meta: { title: '违章审核' }
+        meta: { title: '违章详情' }
       },
       {
         path: 'violations',
