@@ -17,7 +17,7 @@
             <el-timeline-item
               v-for="item in announcements"
               :key="item.id"
-              :timestamp="item.created_at"
+              :timestamp="formatAnnouncementTime(item.created_at)"
               placement="top"
             >
               <div class="announcement-title">{{ item.title }}</div>
@@ -98,6 +98,7 @@ import { useRouter } from 'vue-router'
 import { fetchCases } from '@/api/case'
 import { fetchOwnerViolations } from '@/api/violation'
 import { getMyVehicles } from '@/api/vehicle'
+import { fetchAnnouncements } from '@/api/announcement'
 import { useUserStore } from '@/stores/user'
 import { fetchAllCitizenCases, summarizeCitizenOverview } from '@/utils/contracts'
 
@@ -105,6 +106,27 @@ const router = useRouter()
 const userStore = useUserStore()
 const announcements = ref([])
 const stats = reactive(summarizeCitizenOverview())
+
+async function loadAnnouncements() {
+  try {
+    const response = await fetchAnnouncements({ page: 1, page_size: 5 })
+    announcements.value = response.data.items ?? []
+  } catch {
+    announcements.value = []
+  }
+}
+
+function formatAnnouncementTime(value) {
+  if (!value) return ''
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(new Date(value))
+}
 
 async function loadOverview() {
   const ownerId = userStore.userInfo?.id ?? JSON.parse(localStorage.getItem('userInfo') || '{}').id
@@ -123,7 +145,10 @@ async function loadOverview() {
   } catch {}
 }
 
-onMounted(loadOverview)
+onMounted(() => {
+  loadAnnouncements()
+  loadOverview()
+})
 </script>
 
 <style scoped>

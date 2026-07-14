@@ -194,15 +194,18 @@ test('announcement administration uses backend CRUD without publish state', asyn
   assert.doesNotMatch(announcement, /UnderDevelopment|localStorage|is_published/)
 })
 
-test('rule administration deletes persisted rules after confirmation', async () => {
+test('rule administration UI and API are removed', async () => {
   const api = await source('../src/api/system.js')
-  const rules = await source('../src/views/admin/RuleConfig.vue')
-  assert.match(api, /export const deleteRule = \(id\) => request\.delete\(`\/admin\/rules\/\$\{id\}`\)/)
-  assert.match(rules, /deleteRule/)
-  assert.match(rules, /ElMessageBox\.confirm/)
-  assert.match(rules, /await deleteRule\(row\.id\)/)
-  assert.match(rules, /deletingIds/)
-  assert.doesNotMatch(rules, /localStorage|defaultRules|DEFAULT_RULES/)
+  const router = await source('../src/router/index.js')
+  const layout = await source('../src/layouts/AdminLayout.vue')
+  assert.doesNotMatch(api, /admin\/rules|fetchRules|createRule|updateRule|deleteRule/)
+  assert.doesNotMatch(router, /AdminRules|RuleConfig|path: 'rules'/)
+  assert.doesNotMatch(layout, /\/admin\/rules|违章规则/)
+  assert.match(
+    layout,
+    /<el-menu-item index="\/admin\/announcements"[\s\S]*?<el-icon><Bell \/><\/el-icon>[\s\S]*?<template #title>公告管理<\/template>[\s\S]*?<\/el-menu-item>/
+  )
+  assert.doesNotMatch(layout, /<el-sub-menu index="configuration"|系统配置|<Tools \/>/)
 })
 
 test('all role layouts collapse the sidebar when entering a mobile viewport', async () => {
@@ -228,6 +231,14 @@ test('review workbench stacks filters and cards on mobile', async () => {
   assert.match(workbench, /@media \(max-width: 720px\)/)
   assert.match(workbench, /\.toolbar\s*\{\s*flex-direction: column;/)
   assert.match(workbench, /\.card-grid\s*\{\s*grid-template-columns: minmax\(0, 1fr\);/)
+})
+
+test('workbench thumbnails navigate without opening a cached image viewer', async () => {
+  const workbench = await source('../src/views/review/Workbench.vue')
+  const detail = await source('../src/views/review/CaseDetail.vue')
+
+  assert.doesNotMatch(workbench, /preview-src-list/)
+  assert.match(detail, /preview-src-list/)
 })
 
 test('dashboard stacks its primary charts on mobile', async () => {

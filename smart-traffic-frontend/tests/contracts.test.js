@@ -488,11 +488,16 @@ test('includes rewards from every citizen case page when total exceeds 100', asy
   )
 })
 
-test('does not fabricate citizen announcements without a backend API', async () => {
+test('citizen announcements load from the backend API without fabricated rows', async () => {
   const source = await readFile(new URL('../src/views/citizen/Home.vue', import.meta.url), 'utf8')
 
   assert.doesNotMatch(source, /系统升级通知/)
   assert.match(source, /const announcements = ref\(\[\]\)/)
+  assert.match(source, /import \{ fetchAnnouncements \} from '@\/api\/announcement'/)
+  assert.match(source, /fetchAnnouncements\(\{ page: 1, page_size: 5 \}\)/)
+  assert.match(source, /announcements\.value = response\.data\.items \?\? \[\]/)
+  assert.match(source, /:timestamp="formatAnnouncementTime\(item\.created_at\)"/)
+  assert.match(source, /new Intl\.DateTimeFormat\('zh-CN'/)
 })
 
 test('reviewer violations use the shared query contract and complete-page exports', async () => {

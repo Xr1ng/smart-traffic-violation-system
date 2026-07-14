@@ -36,14 +36,10 @@
           <template #title>设备管理</template>
         </el-menu-item>
 
-        <el-sub-menu index="configuration">
-          <template #title>
-            <el-icon><Tools /></el-icon>
-            <span>系统配置</span>
-          </template>
-          <el-menu-item index="/admin/rules" @click="nav('/admin/rules')">违章规则</el-menu-item>
-          <el-menu-item index="/admin/announcements" @click="nav('/admin/announcements')">公告管理</el-menu-item>
-        </el-sub-menu>
+        <el-menu-item index="/admin/announcements" @click="nav('/admin/announcements')">
+          <el-icon><Bell /></el-icon>
+          <template #title>公告管理</template>
+        </el-menu-item>
 
         <el-menu-item index="/admin/logs" @click="nav('/admin/logs')">
           <el-icon><Document /></el-icon>
@@ -103,7 +99,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  Document, Expand, Fold, LocationFilled, Tools,
+  Bell, Document, Expand, Fold, LocationFilled,
   UserFilled, Van, VideoCamera, WarningFilled
 } from '@element-plus/icons-vue'
 import BackToTop from '@/components/BackToTop.vue'
@@ -126,8 +122,7 @@ const activeMenu = computed(() => {
 })
 
 const parentLabels = [
-  [/^\/admin\/violations/, '违章管理'],
-  [/^\/admin\/(rules|announcements)/, '系统配置']
+  [/^\/admin\/violations/, '违章管理']
 ]
 
 const breadcrumbItems = computed(() => {

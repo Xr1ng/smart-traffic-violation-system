@@ -122,6 +122,31 @@ const createRegisterRuntime = (overrides = {}) => {
   return { ...runtime, cleanup: () => cleanup(), navigations, notifications, timers }
 }
 
+const createLoginRuntime = (overrides = {}) => {
+  const notifications = []
+  const navigations = []
+
+  const dependencies = {
+    ref,
+    reactive,
+    useRouter: () => ({ push: (path) => navigations.push(path) }),
+    useUserStore: () => ({ homePath: '/admin/stats' }),
+    ElMessage: { success: (message) => notifications.push(message) },
+    login: async () => {},
+    ...overrides
+  }
+
+  const runtime = instantiateScriptSetup(
+    'src/views/auth/Login.vue',
+    dependencies,
+    ['formRef', 'loading', 'form', 'handleLogin']
+  )
+
+  runtime.formRef.value = { validate: async () => true }
+
+  return { ...runtime, navigations, notifications }
+}
+
 
 test('auth API exposes email verification and reset endpoints', () => {
   const source = read('src/api/auth.js')
@@ -163,6 +188,25 @@ test('forgot password route and login entry are wired', () => {
   assert.match(router, /name: 'ForgotPassword'/)
   assert.match(router, /ForgotPassword\.vue/)
   assert.match(login, /router\.push\('\/forgot-password'\)/)
+})
+
+
+test('login runtime keeps failed credentials on the login page', async () => {
+  const runtime = createLoginRuntime({
+    login: async () => {
+      throw Object.assign(new Error('Request failed with status code 401'), {
+        isAxiosError: true
+      })
+    }
+  })
+  runtime.form.username = 'admin'
+  runtime.form.password = 'wrong-password'
+
+  await runtime.handleLogin()
+
+  assert.equal(runtime.loading.value, false)
+  assert.deepEqual(runtime.navigations, [])
+  assert.deepEqual(runtime.notifications, [])
 })
 
 

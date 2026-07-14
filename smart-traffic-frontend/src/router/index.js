@@ -161,12 +161,6 @@ const routes = [
         meta: { title: '摄像头管理', keepAlive: true }
       },
       {
-        path: 'rules',
-        name: 'AdminRules',
-        component: () => import('@/views/admin/RuleConfig.vue'),
-        meta: { title: '违章规则', keepAlive: true }
-      },
-      {
         path: 'sms-templates',
         name: 'AdminSms',
         component: () => import('@/views/admin/SmsTemplate.vue'),

@@ -42,7 +42,6 @@
           </template>
         </el-table-column>
         <el-table-column prop="detail" label="操作详情" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="ip" label="IP 地址" width="140" />
       </el-table>
 
       <div style="text-align:right;padding-top:16px">

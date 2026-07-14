@@ -503,28 +503,7 @@ citizen 只能看自己的；admin 可看任意。查他人→403。
 // 409: 车牌号已存在 · 400: 车主不存在
 ```
 
-### 7.4 违章规则管理
-
-前缀：`/admin/rules`
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/admin/rules` | 建规则 |
-| GET | `/admin/rules` | 列表 |
-| PATCH | `/admin/rules/{id}` | 修改 |
-
-```json
-// POST
-{ "rule_code": "SPD-001", "violation_type": "超速",
-  "rule_type": "speed", "params": "{\"speed_limit\":80}", "description": "限速80" }
-// 201
-
-// PATCH
-{ "is_active": false, "description": "已废弃" }
-// rule_type: speed / special_lane
-```
-
-### 7.5 审计日志
+### 7.4 审计日志
 
 前缀：`/admin/audit-logs`
 
@@ -542,7 +521,7 @@ citizen 只能看自己的；admin 可看任意。查他人→403。
    "ip_address":"127.0.0.1", "created_at":"..." }], "total":10, "page":1, "page_size":20 }
 ```
 
-### 7.6 奖励记录
+### 7.5 奖励记录
 
 前缀：`/admin/rewards`
 
@@ -733,7 +712,6 @@ HTTP 状态码即错误类型，响应体格式：
 | /admin/cameras | — | — | ✅ | — |
 | /admin/users | — | — | ✅ | — |
 | /admin/vehicles | — | — | ✅ | — |
-| /admin/rules | — | — | ✅ | — |
 | /admin/audit-logs | — | — | ✅ | — |
 | /admin/rewards | — | — | ✅ | — |
 | /internal/ai | — | ✅ | ✅ | — |

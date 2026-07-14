@@ -12,7 +12,6 @@ from app.api.v1 import (
     media,
     rewards,
     roles,
-    rules,
     statistics,
     users,
     vehicles,
@@ -33,7 +32,6 @@ api_router.include_router(users.router)
 api_router.include_router(vehicles.router)
 api_router.include_router(vehicles.citizen_router)
 api_router.include_router(rewards.router)
-api_router.include_router(rules.router)
 api_router.include_router(analysis.router)
 api_router.include_router(roles.router)
 api_router.include_router(audit_logs.router)

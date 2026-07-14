@@ -22,12 +22,6 @@ export const generateKey = (deviceId) => request.post(`/admin/cameras/${deviceId
 export const listKeys = (deviceId) => request.get(`/admin/cameras/${deviceId}/keys`)
 export const revokeKey = (deviceId, keyId) => request.post(`/admin/cameras/${deviceId}/keys/${keyId}/revoke`)
 
-// ==================== 违章规则 — /api/v1/admin/rules ====================
-export const fetchRules = (params) => request.get('/admin/rules', { params })
-export const createRule = (data) => request.post('/admin/rules', data)
-export const updateRule = (id, data) => request.patch(`/admin/rules/${id}`, data)
-export const deleteRule = (id) => request.delete(`/admin/rules/${id}`)
-
 // ==================== 审计日志 — /api/v1/admin/audit-logs ====================
 export const fetchAuditLogs = (params) => request.get('/admin/audit-logs', { params })
 

@@ -85,6 +85,8 @@ async function handleLogin() {
     }
     ElMessage.success('登录成功')
     router.push(userStore.homePath)
+  } catch (error) {
+    if (!error?.isAxiosError) throw error
   } finally {
     loading.value = false
   }

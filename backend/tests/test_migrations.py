@@ -14,7 +14,52 @@ def _script_directory() -> ScriptDirectory:
 
 
 def test_alembic_has_single_head():
-    assert _script_directory().get_heads() == ["20260714_130000"]
+    assert _script_directory().get_heads() == ["20260715_090000"]
+
+
+def test_auth_email_template_migration_inserts_only_missing_templates(monkeypatch):
+    script = _script_directory()
+    revision = script.get_revision("20260714_140000")
+    engine = sa.create_engine("sqlite://")
+    metadata = sa.MetaData()
+    templates = sa.Table(
+        "notification_templates",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("code", sa.String(32), unique=True, nullable=False),
+        sa.Column("channel", sa.String(16), nullable=False),
+        sa.Column("subject_template", sa.String(255), nullable=False),
+        sa.Column("body_template", sa.Text, nullable=False),
+        sa.Column("status", sa.String(16), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    )
+
+    with engine.begin() as connection:
+        metadata.create_all(connection)
+        connection.execute(templates.insert().values(
+            code="register_email_code",
+            channel="email",
+            subject_template="自定义注册主题",
+            body_template="自定义注册正文 {code}",
+            status="enabled",
+            created_at=sa.func.now(),
+        ))
+        operations = Operations(MigrationContext.configure(connection))
+        monkeypatch.setattr(revision.module, "op", operations)
+
+        revision.module.upgrade()
+
+        rows = {
+            row.code: row
+            for row in connection.execute(sa.select(templates)).all()
+        }
+        assert set(rows) == {
+            "register_email_code",
+            "password_reset_email_code",
+        }
+        assert rows["register_email_code"].subject_template == "自定义注册主题"
+        assert "{code}" in rows["password_reset_email_code"].body_template
+        assert "{expires_minutes}" in rows["password_reset_email_code"].body_template
 
 
 def test_announcements_migration_creates_expected_table(monkeypatch):
@@ -170,6 +215,27 @@ def test_merge_revision_owns_violation_rules_table(monkeypatch):
         merge.module.downgrade()
 
         assert "violation_rules" not in sa.inspect(connection).get_table_names()
+
+
+def test_remove_violation_rules_migration_drops_table(monkeypatch):
+    script = _script_directory()
+    create_revision = script.get_revision("7d4c9f1a2b3e")
+    remove_revision = script.get_revision("20260715_090000")
+    engine = sa.create_engine("sqlite://")
+
+    with engine.begin() as connection:
+        operations = Operations(MigrationContext.configure(connection))
+        monkeypatch.setattr(create_revision.module, "op", operations)
+        monkeypatch.setattr(remove_revision.module, "op", operations)
+
+        create_revision.module.upgrade()
+        assert "violation_rules" in sa.inspect(connection).get_table_names()
+
+        remove_revision.module.upgrade()
+        assert "violation_rules" not in sa.inspect(connection).get_table_names()
+
+        remove_revision.module.downgrade()
+        assert "violation_rules" in sa.inspect(connection).get_table_names()
 
 
 def test_intake_description_and_vehicle_unbinding_migration(monkeypatch):

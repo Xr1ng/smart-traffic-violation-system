@@ -61,7 +61,7 @@
 
         <!-- 图片预览 -->
         <div class="card-image">
-          <el-image :src="item.media?.original_url" fit="cover" style="width:100%;height:180px" :preview-src-list="[item.media?.original_url]">
+          <el-image :src="item.media?.original_url" fit="cover" style="width:100%;height:180px">
             <template #error>
               <div class="img-placeholder"><el-icon :size="40"><Picture /></el-icon></div>
             </template>
