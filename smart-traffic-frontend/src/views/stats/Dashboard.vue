@@ -11,6 +11,7 @@
         <el-button type="primary" size="small" @click="router.push(buildReportRoute(route.path, dateRange))">
           <el-icon><Document /></el-icon>生成报告
         </el-button>
+        <el-button :icon="Refresh" size="small" circle :loading="refreshing" @click="loadData" title="刷新数据" />
       </div>
     </div>
 
@@ -54,7 +55,7 @@
       <el-col :span="24">
         <el-card class="chart-card">
           <template #header><span>🔥 路段‑时段热力图</span></template>
-          <div ref="heatmapChart" style="width:100%;height:340px"></div>
+          <div ref="heatmapChart" style="width:100%;height:340px;overflow:hidden"></div>
         </el-card>
       </el-col>
     </el-row>
@@ -67,7 +68,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { fetchOverview, fetchByTime, fetchByType, fetchByLocation, fetchRoadTimeHeatmap } from '@/api/statistics'
 import { buildReportRoute, mapNamedSeries } from '@/utils/contracts'
 import * as echarts from 'echarts'
-import { WarningFilled, TrendCharts, List, DataAnalysis, Checked, Collection, Document } from '@element-plus/icons-vue'
+import { WarningFilled, TrendCharts, List, DataAnalysis, Checked, Collection, Document, Refresh } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -89,6 +90,7 @@ const regionRank = ref([])
 const heatmapData = ref({ time_slots: [], roads: [], items: [] })
 
 const chartInstances = []
+const refreshing = ref(false)
 
 function setPeriod(p) {
   period.value = p
@@ -102,39 +104,61 @@ function setPeriod(p) {
 const overviewCards = computed(() => {
   const d = overview.value
   return [
-    { label: '总违章数', value: d.total_violations ?? 0, color: '#409eff', bg: 'rgba(64,158,255,0.1)', icon: 'WarningFilled' },
+    { label: '总违章数', value: d.total_violations ?? 0, color: '#72a8c4', bg: 'rgba(114,168,196,0.1)', icon: 'WarningFilled' },
     { label: '今日新增', value: d.today_new ?? 0, color: '#67c23a', bg: 'rgba(103,194,58,0.1)', icon: 'TrendCharts' },
     { label: '待审核', value: d.pending_count ?? 0, color: '#e6a23c', bg: 'rgba(230,162,60,0.1)', icon: 'List' },
-    { label: '通过率', value: `${d.approve_rate ?? 0}%`, color: '#409eff', bg: 'rgba(64,158,255,0.1)', icon: 'Checked' },
+    { label: '通过率', value: `${d.approve_rate ?? 0}%`, color: '#72a8c4', bg: 'rgba(114,168,196,0.1)', icon: 'Checked' },
     { label: '驳回率', value: `${d.reject_rate ?? 0}%`, color: '#f56c6c', bg: 'rgba(245,108,108,0.1)', icon: 'DataAnalysis' },
     { label: '通知成功率', value: `${d.notify_success_rate ?? 0}%`, color: '#67c23a', bg: 'rgba(103,194,58,0.1)', icon: 'Collection' }
   ]
 })
 
 async function loadData() {
+  refreshing.value = true
   const params = {}
   if (dateRange.value && dateRange.value.length === 2) {
     params.start_time = dateRange.value[0]
     params.end_time = dateRange.value[1]
   }
+
+  let allFailed = true
+
   try {
     const [ov, tr, ty, rg] = await Promise.all([
-      fetchOverview(params).catch(() => ({ data: {} })),
-      fetchByTime(params).catch(() => ({ data: { items: [] } })),
-      fetchByType(params).catch(() => ({ data: { items: [] } })),
-      fetchByLocation(params).catch(() => ({ data: { items: [] } }))
+      fetchOverview(params).catch(() => { allFailed = allFailed && false; return { data: null } }),
+      fetchByTime(params).catch(() => { allFailed = allFailed && false; return { data: { items: [] } } }),
+      fetchByType(params).catch(() => { allFailed = allFailed && false; return { data: { items: [] } } }),
+      fetchByLocation(params).catch(() => { allFailed = allFailed && false; return { data: { items: [] } } })
     ])
-    overview.value = ov.data || ov
+    overview.value = (ov.data && Object.keys(ov.data).length > 0) ? ov.data : ov
     trend.value = (tr.data?.items || []).map(t => ({ date: t.date, count: t.count }))
     typeRatio.value = mapNamedSeries(ty.data || ty)
     regionRank.value = mapNamedSeries(rg.data || rg)
-    const hm = await fetchRoadTimeHeatmap(params).catch(() => ({ data: { time_slots: [], roads: [], items: [] } }))
+
+    const hm = await fetchRoadTimeHeatmap(params).catch(() => { allFailed = allFailed && false; return { data: { time_slots: [], roads: [], items: [] } } })
     heatmapData.value = hm.data || hm
+
+    // 只有全部 API 都返回空且网络未报错时才认为后端无数据
+    allFailed = !overview.value || !(overview.value.total_violations || overview.value.total_cases)
+      ? !trend.value?.length
+      : false
   } catch (e) {
     console.error('加载统计数据失败:', e)
+    allFailed = true
   }
+
+  // 完全无数据时展示空状态，不再使用 mock 伪造数据
+  if (allFailed) {
+    overview.value = {}
+    trend.value = []
+    typeRatio.value = []
+    regionRank.value = []
+    heatmapData.value = { time_slots: [], roads: [], items: [] }
+  }
+
   await nextTick()
   renderAll()
+  refreshing.value = false
 }
 
 function renderAll() {
@@ -165,8 +189,8 @@ function renderTrend() {
       smooth: true,
       symbol: 'circle',
       symbolSize: 5,
-      lineStyle: { width: 2.5, color: '#409eff' },
-      itemStyle: { color: '#409eff' },
+      lineStyle: { width: 2.5, color: '#72a8c4' },
+      itemStyle: { color: '#72a8c4' },
       areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
         { offset: 0, color: 'rgba(64,158,255,0.3)' },
         { offset: 1, color: 'rgba(64,158,255,0.02)' }
@@ -188,7 +212,7 @@ function renderType() {
       roseType: 'area',
       data: typeRatio.value,
       label: { show: true, formatter: '{b}\n{d}%', fontSize: 10 },
-      color: ['#f56c6c', '#e6a23c', '#409eff', '#67c23a', '#909399', '#b37feb']
+      color: ['#f56c6c', '#e6a23c', '#72a8c4', '#67c23a', '#909399', '#b37feb']
     }]
   })
 }
@@ -204,7 +228,7 @@ function renderRegion() {
     yAxis: { type: 'category', data: data.map(r => r.name), inverse: true, axisLabel: { fontSize: 11 } },
     series: [{
       data: data.map((r, i) => {
-        const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#9b59b6', '#17a2b8']
+        const colors = ['#72a8c4', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#9b59b6', '#17a2b8']
         return { value: r.value, itemStyle: { color: colors[i % colors.length], borderRadius: [0, 4, 4, 0] } }
       }),
       type: 'bar',
@@ -242,13 +266,20 @@ function renderHeatmap() {
 
   chart.setOption({
     tooltip: {
-      position: 'top',
+      position: function (point, params, dom, rect, size) {
+        const x = point[0] - size.contentSize[0] / 2
+        const y = point[1] - size.contentSize[1] - 8
+        return [x, y]
+      },
+      confine: false,
+      appendToBody: true,
+      className: 'heatmap-tooltip',
       formatter: p => `${roads[p.value[1]]} · ${slots[p.value[0]]}时<br/>违章数: <b>${p.value[2]}</b> 件`
     },
-    grid: { left: 120, right: 30, bottom: 40, top: 10 },
+    grid: { left: 100, right: 70, bottom: 30, top: 30, containLabel: true },
     xAxis: {
       type: 'category', data: slots, splitArea: { show: true },
-      axisLabel: { rotate: 45, fontSize: 11 }
+      axisLabel: { fontSize: 10, interval: 0 }
     },
     yAxis: {
       type: 'category', data: roads, splitArea: { show: true },
@@ -257,10 +288,11 @@ function renderHeatmap() {
     visualMap: {
       min: 0, max: maxCount,
       calculable: true,
-      orient: 'horizontal',
-      left: 'center', bottom: 0,
+      orient: 'vertical',
+      right: 0, top: 40, bottom: 40,
+      itemWidth: 12, itemHeight: 120,
       inRange: { color: ['#f0f9ff', '#bae6fd', '#7dd3fc', '#38bdf8', '#0ea5e9', '#0284c7', '#0369a1'] },
-      textStyle: { fontSize: 11 }
+      textStyle: { fontSize: 10 }
     },
     series: [{
       type: 'heatmap', data,
@@ -274,15 +306,21 @@ function handleResize() {
   chartInstances.forEach(c => c.resize())
 }
 
+function handleVisibility() {
+  if (!document.hidden) loadData()
+}
+
 onMounted(async () => {
   await loadData()
   await nextTick()
   renderAll()
   window.addEventListener('resize', handleResize)
+  document.addEventListener('visibilitychange', handleVisibility)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  document.removeEventListener('visibilitychange', handleVisibility)
   chartInstances.forEach(c => c.dispose())
 })
 </script>
@@ -332,4 +370,5 @@ onUnmounted(() => {
 .chart-card :deep(.el-card__body) {
   padding: 8px;
 }
+.heatmap-tooltip { z-index: 9999 !important; }
 </style>

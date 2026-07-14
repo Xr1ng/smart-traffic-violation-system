@@ -2,9 +2,9 @@ import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 
 export const useThemeStore = defineStore('theme', () => {
-  const isDark = ref(localStorage.getItem('theme') === 'dark')
+  const isDark = ref<boolean>(localStorage.getItem('theme') === 'dark')
 
-  function applyTheme() {
+  function applyTheme(): void {
     const html = document.documentElement
     if (isDark.value) {
       html.classList.add('dark')

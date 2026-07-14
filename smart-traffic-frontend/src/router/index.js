@@ -27,7 +27,7 @@ const routes = [
         path: 'home',
         name: 'CitizenHome',
         component: () => import('@/views/citizen/Home.vue'),
-        meta: { title: '首页' }
+        meta: { title: '首页', keepAlive: true }
       },
       {
         path: 'report',
@@ -39,19 +39,19 @@ const routes = [
         path: 'my-reports',
         name: 'CitizenMyReports',
         component: () => import('@/views/citizen/MyReports.vue'),
-        meta: { title: '举报进度' }
+        meta: { title: '举报进度', keepAlive: true }
       },
       {
         path: 'vehicles',
         name: 'CitizenVehicles',
         component: () => import('@/views/citizen/VehicleBinding.vue'),
-        meta: { title: '车辆绑定' }
+        meta: { title: '车辆绑定', keepAlive: true }
       },
       {
         path: 'my-violations',
         name: 'CitizenMyViolations',
         component: () => import('@/views/citizen/MyViolations.vue'),
-        meta: { title: '违章查询' }
+        meta: { title: '违章查询', keepAlive: true }
       },
       {
         path: 'profile',
@@ -73,7 +73,7 @@ const routes = [
         path: 'workbench',
         name: 'ReviewWorkbench',
         component: () => import('@/views/review/Workbench.vue'),
-        meta: { title: '审核工作台' }
+        meta: { title: '审核工作台', keepAlive: true }
       },
       {
         path: 'case/:id',
@@ -85,13 +85,13 @@ const routes = [
         path: 'violations',
         name: 'ReviewViolations',
         component: () => import('@/views/review/ViolationList.vue'),
-        meta: { title: '违章记录' }
+        meta: { title: '违章列表', keepAlive: true }
       },
       {
         path: 'upload',
         name: 'ReviewUpload',
         component: () => import('@/views/review/ImageUpload.vue'),
-        meta: { title: '证据上传' }
+        meta: { title: '证据上传', keepAlive: true }
       },
       {
         path: 'profile',
@@ -112,7 +112,7 @@ const routes = [
         path: '',
         name: 'StatsDashboard',
         component: () => import('@/views/stats/Dashboard.vue'),
-        meta: { title: '统计分析' }
+        meta: { title: '统计分析', keepAlive: true }
       },
       {
         path: 'report',
@@ -134,7 +134,7 @@ const routes = [
         path: 'stats',
         name: 'AdminStats',
         component: () => import('@/views/stats/Dashboard.vue'),
-        meta: { title: '统计分析' }
+        meta: { title: '统计分析', keepAlive: true }
       },
       {
         path: 'stats/report',
@@ -146,19 +146,19 @@ const routes = [
         path: 'users',
         name: 'AdminUsers',
         component: () => import('@/views/admin/UserManage.vue'),
-        meta: { title: '用户管理' }
+        meta: { title: '用户管理', keepAlive: true }
       },
       {
         path: 'cameras',
         name: 'AdminCameras',
         component: () => import('@/views/admin/CameraManage.vue'),
-        meta: { title: '摄像头管理' }
+        meta: { title: '摄像头管理', keepAlive: true }
       },
       {
         path: 'rules',
         name: 'AdminRules',
         component: () => import('@/views/admin/RuleConfig.vue'),
-        meta: { title: '违章规则' }
+        meta: { title: '违章规则', keepAlive: true }
       },
       {
         path: 'sms-templates',
@@ -170,13 +170,13 @@ const routes = [
         path: 'logs',
         name: 'AdminLogs',
         component: () => import('@/views/admin/AuditLog.vue'),
-        meta: { title: '操作日志' }
+        meta: { title: '操作日志', keepAlive: true }
       },
       {
         path: 'announcements',
         name: 'AdminAnnouncements',
         component: () => import('@/views/admin/Announcement.vue'),
-        meta: { title: '公告管理' }
+        meta: { title: '公告管理', keepAlive: true }
       },
       {
         path: 'violations/upload',
@@ -193,32 +193,20 @@ const routes = [
       {
         path: 'violations/:id',
         name: 'AdminViolationDetail',
-        component: () => import('@/views/admin/ViolationReview.vue'),
+        component: () => import('@/views/review/CaseDetail.vue'),
         meta: { title: '违章详情' }
       },
       {
         path: 'violations',
         name: 'AdminViolationList',
         component: () => import('@/views/admin/ViolationList.vue'),
-        meta: { title: '违章列表' }
+        meta: { title: '违章列表', keepAlive: true }
       },
       {
         path: 'vehicles',
         name: 'AdminVehicles',
         component: () => import('@/views/admin/VehicleList.vue'),
-        meta: { title: '车辆管理' }
-      },
-      {
-        path: 'drivers',
-        name: 'AdminDrivers',
-        component: () => import('@/views/admin/DriverList.vue'),
-        meta: { title: '驾驶人管理' }
-      },
-      {
-        path: 'database',
-        name: 'AdminDatabase',
-        component: () => import('@/views/system/DatabaseMaintain.vue'),
-        meta: { title: '数据库维护' }
+        meta: { title: '车辆管理', keepAlive: true }
       },
       {
         path: 'profile',

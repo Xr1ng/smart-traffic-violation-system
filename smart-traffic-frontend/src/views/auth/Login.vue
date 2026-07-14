@@ -24,7 +24,7 @@
           </el-form-item>
           <div class="auth-extra">
             <el-checkbox v-model="rememberMe">记住我</el-checkbox>
-            <a @click="router.push('/register')">忘记密码？</a>
+            <el-link type="primary" :underline="false" style="font-size:13px" @click="openReset">忘记密码？</el-link>
           </div>
           <el-form-item>
             <el-button type="primary" :loading="loading" style="width:100%" @click="handleLogin">
@@ -42,6 +42,54 @@
         <img src="/images/auth-bg.png" alt="Smart Traffic" />
       </div>
     </div>
+
+    <!-- 忘记密码对话框 -->
+    <el-dialog v-model="resetVisible" title="重置密码" width="420px" :close-on-click-modal="false" center>
+      <!-- 步骤1：验证身份 -->
+      <el-form v-if="resetStep === 1" ref="resetForm1Ref" :model="resetForm" :rules="resetRules1" size="large" @keyup.enter="handleSendCode">
+        <el-form-item prop="username">
+          <el-input v-model="resetForm.username" placeholder="请输入用户名" />
+        </el-form-item>
+        <el-form-item prop="email">
+          <el-input v-model="resetForm.email" placeholder="请输入注册邮箱" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="sendLoading" style="width:100%" @click="handleSendCode">
+            {{ sendLoading ? '验证中...' : '获取验证码' }}
+          </el-button>
+        </el-form-item>
+      </el-form>
+
+      <!-- 步骤2：重置密码 -->
+      <el-form v-else ref="resetForm2Ref" :model="resetForm" :rules="resetRules2" size="large" @keyup.enter="handleReset">
+        <el-form-item prop="code">
+          <div style="display:flex;gap:10px;width:100%">
+            <el-input v-model="resetForm.code" placeholder="请输入验证码" style="flex:1" />
+            <el-button
+              :disabled="resetCountdown > 0"
+              style="width:120px;flex-shrink:0"
+              @click="handleSendCode"
+            >
+              {{ resetCountdown > 0 ? `${resetCountdown}s 后重发` : '重新获取' }}
+            </el-button>
+          </div>
+        </el-form-item>
+        <el-form-item prop="new_password">
+          <el-input v-model="resetForm.new_password" type="password" placeholder="请输入新密码" show-password />
+        </el-form-item>
+        <el-form-item prop="repassword">
+          <el-input v-model="resetForm.repassword" type="password" placeholder="请确认新密码" show-password />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :loading="resetLoading" style="width:100%" @click="handleReset">
+            {{ resetLoading ? '重置中...' : '重置密码' }}
+          </el-button>
+        </el-form-item>
+        <div style="text-align:center">
+          <el-link type="primary" :underline="false" style="font-size:13px" @click="resetStep = 1">返回上一步</el-link>
+        </div>
+      </el-form>
+    </el-dialog>
   </div>
 </template>
 
@@ -50,7 +98,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import { login } from '@/api/auth'
+import { forgotPasswordVerify, forgotPasswordReset } from '@/api/auth'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -64,20 +112,119 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+// ========== 忘记密码 ==========
+const resetVisible = ref(false)
+const resetStep = ref(1)
+const sendLoading = ref(false)
+const resetLoading = ref(false)
+const resetCountdown = ref(0)
+const resetForm1Ref = ref(null)
+const resetForm2Ref = ref(null)
+
+const resetForm = reactive({
+  username: '',
+  email: '',
+  code: '',
+  new_password: '',
+  repassword: ''
+})
+
+const resetRules1 = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ]
+}
+
+const validateRePassword = (rule, value, callback) => {
+  if (value !== resetForm.new_password) {
+    callback(new Error('两次输入的密码不一致'))
+  } else {
+    callback()
+  }
+}
+
+const resetRules2 = {
+  code: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { len: 6, message: '验证码为6位数字', trigger: 'blur' }
+  ],
+  new_password: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+  ],
+  repassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    { validator: validateRePassword, trigger: 'blur' }
+  ]
+}
+
+function openReset() {
+  resetStep.value = 1
+  resetForm.username = form.username || ''
+  resetForm.email = ''
+  resetForm.code = ''
+  resetForm.new_password = ''
+  resetForm.repassword = ''
+  resetVisible.value = true
+}
+
+function startResetCountdown() {
+  resetCountdown.value = 60
+  const timer = setInterval(() => {
+    resetCountdown.value--
+    if (resetCountdown.value <= 0) clearInterval(timer)
+  }, 1000)
+}
+
+async function handleSendCode() {
+  const valid = await resetForm1Ref.value.validate().catch(() => false)
+  if (!valid) return
+
+  sendLoading.value = true
+  try {
+    await forgotPasswordVerify({ username: resetForm.username, email: resetForm.email })
+    ElMessage.success('验证码已发送至您的邮箱，请注意查收')
+    resetStep.value = 2
+    resetForm.code = ''
+    startResetCountdown()
+  } catch (e) {
+    // 后端会返回错误信息
+  } finally {
+    sendLoading.value = false
+  }
+}
+
+async function handleReset() {
+  const valid = await resetForm2Ref.value.validate().catch(() => false)
+  if (!valid) return
+
+  resetLoading.value = true
+  try {
+    await forgotPasswordReset({
+      username: resetForm.username,
+      email: resetForm.email,
+      code: resetForm.code,
+      new_password: resetForm.new_password
+    })
+    ElMessage.success('密码重置成功，请重新登录')
+    resetVisible.value = false
+    form.username = resetForm.username
+    form.password = ''
+  } finally {
+    resetLoading.value = false
+  }
+}
+
+// ========== 登录 ==========
 async function handleLogin() {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
 
   loading.value = true
   try {
-    const res = await login({ username: form.username, password: form.password })
-    const { access_token, user } = res.data
-    userStore.token = access_token
-    userStore.role = user.role_code
-    userStore.userInfo = { id: user.id, username: user.username, role: user.role_code }
-    localStorage.setItem('token', access_token)
-    localStorage.setItem('role', user.role_code)
-    localStorage.setItem('userInfo', JSON.stringify({ id: user.id, username: user.username, role: user.role_code }))
+    await userStore.login({ username: form.username, password: form.password })
     if (rememberMe.value) {
       localStorage.setItem('remember_username', form.username)
     } else {
@@ -95,30 +242,30 @@ async function handleLogin() {
 :deep(.el-input__wrapper) {
   border-radius: 12px !important;
   box-shadow: none !important;
-  background: #f5f7fa !important;
+  background: #FEFDF8 !important;
   padding: 4px 16px !important;
   border: 1px solid transparent !important;
   transition: all 0.3s ease;
 }
 
 :deep(.el-input__wrapper:hover) {
-  border-color: #d0d7de !important;
+  border-color: #A2D9F0 !important;
 }
 
 :deep(.el-input__wrapper.is-focus) {
-  border-color: #4a90e2 !important;
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1) !important;
+  border-color: #72a8c4 !important;
+  box-shadow: 0 0 0 3px rgba(114, 168, 196, 0.15) !important;
 }
 
 :deep(.el-input__inner) {
   height: 46px;
   font-size: 14px;
-  color: #2d3748;
+  color: #2c3e50;
   background: transparent !important;
 }
 
 :deep(.el-input__inner::placeholder) {
-  color: #a0aec0;
+  color: #919CA3;
 }
 
 :deep(.el-button--primary) {
@@ -126,20 +273,20 @@ async function handleLogin() {
   height: 48px;
   font-size: 15px;
   font-weight: 600;
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%) !important;
+  background: linear-gradient(135deg, #72a8c4 0%, #5b93af 100%) !important;
   border: none !important;
-  box-shadow: 0 4px 16px rgba(74, 144, 226, 0.3) !important;
+  box-shadow: 0 4px 16px rgba(114, 168, 196, 0.35) !important;
   transition: all 0.3s ease;
 }
 
 :deep(.el-button--primary:hover) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4) !important;
+  box-shadow: 0 6px 20px rgba(114, 168, 196, 0.45) !important;
 }
 
 :deep(.el-checkbox__label) {
   font-size: 13px;
-  color: #8898aa;
+  color: #919CA3;
 }
 
 :deep(.el-link) {
@@ -148,13 +295,13 @@ async function handleLogin() {
 }
 
 .auth-extra a {
-  color: #4a90e2;
+  color: #72a8c4;
   cursor: pointer;
   transition: color 0.2s;
 }
 
 .auth-extra a:hover {
-  color: #357abd;
+  color: #5b93af;
   text-decoration: underline;
 }
 </style>

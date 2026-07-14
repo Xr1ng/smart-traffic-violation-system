@@ -19,10 +19,25 @@
       </div>
       <div class="toolbar-right">
         <el-tag type="danger" v-if="pendingTotal">待审核：{{ pendingTotal }} 件</el-tag>
+        <el-button size="small" @click="batchMode = !batchMode" :type="batchMode ? 'danger' : 'default'">
+          {{ batchMode ? '退出批量' : '批量审核' }}
+        </el-button>
         <el-button size="small" @click="fetchCases" :loading="loading">
           <el-icon><Refresh /></el-icon>刷新
         </el-button>
       </div>
+    </div>
+
+    <!-- 批量操作栏 -->
+    <div class="batch-bar" v-if="batchMode && selectedIds.length > 0">
+      <span class="batch-info">已选 <strong>{{ selectedIds.length }}</strong> 件</span>
+      <el-button type="success" size="small" @click="batchApprove" :loading="batchLoading">
+        <el-icon><Check /></el-icon>批量通过
+      </el-button>
+      <el-button type="danger" size="small" @click="batchReject" :loading="batchLoading">
+        <el-icon><Close /></el-icon>批量驳回
+      </el-button>
+      <el-button size="small" @click="selectedIds = []">取消选择</el-button>
     </div>
 
     <!-- 案件卡片流 -->
@@ -32,10 +47,14 @@
       <el-card
         v-for="item in cases"
         :key="item.id"
-        :class="['case-card', { 'is-pending': ['uploaded', 'pending_human_review'].includes(item.status) }]"
+        :class="['case-card', { 'is-pending': ['uploaded', 'pending_human_review'].includes(item.status), 'is-selected': selectedIds.includes(item.id) }]"
         shadow="hover"
-        @click="openDetail(item.id)"
+        @click="onCardClick(item.id)"
       >
+        <!-- 批量选择框 -->
+        <div v-if="batchMode" class="batch-check" @click.stop>
+          <el-checkbox :model-value="selectedIds.includes(item.id)" @change="toggleSelect(item.id)" />
+        </div>
         <!-- 状态标签 + 案件号 -->
         <div class="card-header">
           <el-tag :type="statusType(item.status)" size="small">{{ statusText(item.status) }}</el-tag>
@@ -97,7 +116,9 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 import { fetchCases as getCases } from '@/api/case'
+import { approveCase, rejectCase } from '@/api/case'
 import { fetchProtectedMediaUrl } from '@/api/media'
 import {
   caseAiFallbackText,
@@ -105,9 +126,10 @@ import {
   loadProtectedMediaUrls,
   releaseProtectedMediaUrls
 } from '@/utils/contracts'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
+const userStore = useUserStore()
 const cases = ref([])
 const loading = ref(false)
 const page = ref(1)
@@ -115,6 +137,57 @@ const pageSize = ref(12)
 const total = ref(0)
 const pendingTotal = ref(0)
 const mediaRequestGuard = createLatestRequestGuard()
+
+// 批量审核
+const batchMode = ref(false)
+const selectedIds = ref([])
+const batchLoading = ref(false)
+
+function onCardClick(id) {
+  if (batchMode.value) {
+    toggleSelect(id)
+  } else {
+    openDetail(id)
+  }
+}
+
+function toggleSelect(id) {
+  const i = selectedIds.value.indexOf(id)
+  if (i > -1) selectedIds.value.splice(i, 1)
+  else selectedIds.value.push(id)
+}
+
+async function batchApprove() {
+  if (selectedIds.value.length === 0) return
+  try {
+    await ElMessageBox.confirm(`确认通过选中的 ${selectedIds.value.length} 件案件？`, '批量审核', { type: 'warning' })
+  } catch { return }
+  batchLoading.value = true
+  try {
+    await Promise.all(selectedIds.value.map(id => approveCase(id, { review_comment: '批量审核通过' })))
+    ElMessage.success(`已通过 ${selectedIds.value.length} 件`)
+    selectedIds.value = []
+    fetchCases()
+  } catch { ElMessage.error('批量操作失败') }
+  finally { batchLoading.value = false }
+}
+
+async function batchReject() {
+  if (selectedIds.value.length === 0) return
+  let comment = '批量审核驳回'
+  try {
+    const result = await ElMessageBox.prompt('驳回原因', '批量驳回', { type: 'warning', inputPlaceholder: '请填写驳回原因' })
+    comment = result.value || comment
+  } catch { return }
+  batchLoading.value = true
+  try {
+    await Promise.all(selectedIds.value.map(id => rejectCase(id, { review_comment: comment })))
+    ElMessage.success(`已驳回 ${selectedIds.value.length} 件`)
+    selectedIds.value = []
+    fetchCases()
+  } catch { ElMessage.error('批量操作失败') }
+  finally { batchLoading.value = false }
+}
 
 const filter = reactive({
   status: '',
@@ -189,7 +262,8 @@ async function fetchCases() {
 }
 
 function openDetail(id) {
-  router.push(`/review/case/${id}`)
+  const path = userStore.role === 'admin' ? `/admin/violations/${id}` : `/review/case/${id}`
+  router.push(path)
 }
 
 // 定时轮询（每 15 秒刷新待审核）
@@ -224,6 +298,16 @@ onUnmounted(() => {
 .toolbar-left { display: flex; align-items: center; gap: 8px; }
 .toolbar-right { display: flex; align-items: center; gap: 12px; }
 
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--el-color-primary-light-9);
+  border-radius: 8px;
+}
+.batch-info { font-size: 14px; color: var(--text-secondary); }
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -234,9 +318,21 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s;
   border: 2px solid transparent;
+  position: relative;
 }
 .case-card:hover { transform: translateY(-2px); }
 .case-card.is-pending { border-color: #f56c6c; }
+.case-card.is-selected { border-color: var(--el-color-primary); background: var(--el-color-primary-light-9); }
+
+.batch-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  background: rgba(255,255,255,0.9);
+  border-radius: 4px;
+  padding: 2px 4px;
+}
 
 .card-header {
   display: flex;

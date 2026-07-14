@@ -1,10 +1,13 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title">违章记录管理</h2>
+      <h2 class="page-title">违章列表</h2>
       <div style="display:flex;gap:12px">
         <el-button type="primary" @click="router.push('/admin/violations/upload')">
           上传违章证据
+        </el-button>
+        <el-button type="success" @click="exportData" :disabled="list.length === 0">
+          <el-icon><Download /></el-icon>导出 Excel
         </el-button>
       </div>
     </div>
@@ -49,8 +52,7 @@
       <el-table-column prop="points" label="扣分" width="80" />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
-          <el-tag v-if="row.status === 'pending'" type="info">待处理</el-tag>
-          <el-tag v-else type="info">{{ row.status }}</el-tag>
+          <el-tag :type="statusTagType(row.status)" size="small">{{ statusMap[row.status] || row.status }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="90" fixed="right">
@@ -79,6 +81,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchViolations } from '@/api/violation'
 import { buildViolationQuery } from '@/utils/contracts'
+import { exportToExcel, formatExportTime } from '@/utils/export'
+import { Download } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const list = ref([])
@@ -86,6 +90,11 @@ const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+const statusMap = { pending: '待处理' }
+function statusTagType(s) {
+  return s === 'pending' ? 'warning' : 'info'
+}
 
 const search = reactive({
   plate: '', location: '', type: '', status: '', dateRange: null
@@ -104,6 +113,25 @@ async function fetchList() {
 function resetSearch() {
   Object.keys(search).forEach(k => search[k] = k === 'dateRange' ? null : '')
   fetchList()
+}
+
+function exportData() {
+  const columns = [
+    { key: 'violation_no', label: '违章编号', width: 22 },
+    { key: 'plate_no', label: '车牌号', width: 12 },
+    { key: 'violation_type', label: '违章类型', width: 12 },
+    { key: 'location_text', label: '违章地点', width: 24 },
+    { key: 'occurred_at', label: '违章时间', width: 22 },
+    { key: 'fine_amount', label: '罚款(元)', width: 12 },
+    { key: 'points', label: '扣分', width: 8 },
+    { key: 'status', label: '状态', width: 10 }
+  ]
+  const data = list.value.map(row => ({
+    ...row,
+    occurred_at: formatExportTime(row.occurred_at),
+    status: statusMap[row.status] || row.status
+  }))
+  exportToExcel(data, columns, `违章记录_${new Date().toISOString().slice(0, 10)}`)
 }
 
 onMounted(fetchList)

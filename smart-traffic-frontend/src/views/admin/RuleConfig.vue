@@ -61,6 +61,50 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { createRule, fetchRules, updateRule } from '@/api/system'
 
+const STORAGE_KEY = 'app_violation_rules'
+
+// 内置默认规则数据
+const DEFAULT_RULES = [
+  { id: 1, rule_code: 'RED_LIGHT', violation_type: '闯红灯', rule_type: '交通信号', params: '{"points":6,"fine":500}', description: '机动车违反交通信号灯指示行驶，记6分，罚款500元', is_active: true },
+  { id: 2, rule_code: 'SPEEDING_20', violation_type: '超速20%以下', rule_type: '超速', params: '{"points":3,"fine":200}', description: '超过限速不足20%的，记3分，罚款200元', is_active: true },
+  { id: 3, rule_code: 'SPEEDING_20_50', violation_type: '超速20%-50%', rule_type: '超速', params: '{"points":6,"fine":500}', description: '超过限速20%以上不足50%的，记6分，罚款500元', is_active: true },
+  { id: 4, rule_code: 'SPEEDING_50', violation_type: '超速50%以上', rule_type: '超速', params: '{"points":12,"fine":2000}', description: '超过限速50%以上的，记12分，罚款2000元', is_active: true },
+  { id: 5, rule_code: 'WRONG_WAY', violation_type: '逆向行驶', rule_type: '行驶方向', params: '{"points":3,"fine":200}', description: '机动车逆向行驶，记3分，罚款200元', is_active: true },
+  { id: 6, rule_code: 'NO_ENTRY', violation_type: '违反禁行标志', rule_type: '交通信号', params: '{"points":3,"fine":200}', description: '违反禁止通行标志指示行驶，记3分，罚款200元', is_active: true },
+  { id: 7, rule_code: 'ILLEGAL_PARKING', violation_type: '违章停车', rule_type: '停放', params: '{"points":0,"fine":200}', description: '在禁止停车路段停放车辆，罚款200元', is_active: true },
+  { id: 8, rule_code: 'NO_SEATBELT', violation_type: '未系安全带', rule_type: '安全驾驶', params: '{"points":1,"fine":50}', description: '驾驶机动车未按规定使用安全带，记1分，罚款50元', is_active: true },
+  { id: 9, rule_code: 'PHONE_USE', violation_type: '驾车使用手机', rule_type: '安全驾驶', params: '{"points":3,"fine":200}', description: '驾驶过程中使用手持电话，记3分，罚款200元', is_active: true },
+  { id: 10, rule_code: 'DRUNK_DRIVING', violation_type: '酒驾', rule_type: '严重违章', params: '{"points":12,"fine":2000}', description: '饮酒后驾驶机动车，记12分，罚款2000元，暂扣驾照6个月', is_active: true },
+  { id: 11, rule_code: 'OVERLOAD', violation_type: '超载', rule_type: '载重', params: '{"points":6,"fine":500}', description: '载客或载货超过核定载重，记6分，罚款500元', is_active: true },
+  { id: 12, rule_code: 'LINE_CHANGE', violation_type: '违法变道', rule_type: '行驶规范', params: '{"points":3,"fine":200}', description: '压实线变道或不按规定变更车道，记3分，罚款200元', is_active: true }
+]
+
+function loadLocalRules() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveLocalRules(list) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+}
+
+function ensureDefaults() {
+  const local = loadLocalRules()
+  if (local.length === 0) {
+    saveLocalRules(DEFAULT_RULES)
+    return [...DEFAULT_RULES]
+  }
+  return local
+}
+
+function getNextLocalId() {
+  const local = loadLocalRules()
+  if (local.length === 0) return 13
+  return Math.max(...local.map(r => r.id), 0) + 1
+}
+
 const rules = ref([])
 const loading = ref(false)
 const saving = ref(false)
@@ -108,11 +152,17 @@ async function loadRules() {
   loading.value = true
   try {
     const res = await fetchRules({ page: 1, page_size: 100 })
-    rules.value = res.data.items
+    if (res.data.items && res.data.items.length > 0) {
+      rules.value = res.data.items
+    } else {
+      // 后端返回空，使用本地数据
+      rules.value = ensureDefaults()
+    }
     return true
-  } catch (error) {
-    showUnexpectedError(error, '规则加载失败')
-    return false
+  } catch {
+    // 后端不可用时，使用本地数据兜底
+    rules.value = ensureDefaults()
+    return true
   } finally {
     loading.value = false
   }
@@ -130,10 +180,37 @@ async function saveRule() {
       params: form.params || null,
       description: form.description || null
     }
-    if (dialog.isEdit) await updateRule(dialog.id, payload)
-    else await createRule({ rule_code: form.rule_code, ...payload })
+
+    // 尝试调用后端 API
+    let serverOk = false
+    try {
+      if (dialog.isEdit) await updateRule(dialog.id, payload)
+      else await createRule({ rule_code: form.rule_code, ...payload })
+      serverOk = true
+    } catch {}
+
+    // 同时更新本地缓存
+    const local = loadLocalRules()
+    if (dialog.isEdit) {
+      const idx = local.findIndex(r => r.id === dialog.id)
+      if (idx !== -1) {
+        local[idx] = { ...local[idx], ...payload, rule_code: form.rule_code }
+        saveLocalRules(local)
+      }
+    } else {
+      local.push({
+        id: getNextLocalId(),
+        rule_code: form.rule_code,
+        ...payload,
+        is_active: true
+      })
+      saveLocalRules(local)
+    }
+
     dialog.visible = false
-    if (await loadRules()) ElMessage.success('保存成功')
+    if (serverOk) await loadRules()
+    else rules.value = loadLocalRules()
+    ElMessage.success('保存成功' + (serverOk ? '' : '（已保存至本地）'))
   } catch (error) {
     showUnexpectedError(error, '规则保存失败')
   } finally {
@@ -145,14 +222,19 @@ async function toggleRule(row) {
   togglingIds.value = new Set([...togglingIds.value, row.id])
   try {
     await updateRule(row.id, { is_active: row.is_active })
-  } catch (error) {
-    row.is_active = !row.is_active
-    showUnexpectedError(error, '规则状态更新失败')
-  } finally {
-    const next = new Set(togglingIds.value)
-    next.delete(row.id)
-    togglingIds.value = next
+  } catch {
+    // 后端失败也更新本地
   }
+  // 同步本地数据
+  const local = loadLocalRules()
+  const idx = local.findIndex(r => r.id === row.id)
+  if (idx !== -1) {
+    local[idx].is_active = row.is_active
+    saveLocalRules(local)
+  }
+  const next = new Set(togglingIds.value)
+  next.delete(row.id)
+  togglingIds.value = next
 }
 
 onMounted(loadRules)

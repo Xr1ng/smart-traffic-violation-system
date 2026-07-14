@@ -10,7 +10,7 @@
 
         <el-form ref="formRef" :model="form" :rules="rules" size="large">
           <el-form-item prop="username">
-            <el-input v-model="form.username" placeholder="请输入用户名" prefix-icon="User" />
+            <el-input v-model="form.username" placeholder="请输入真实姓名" prefix-icon="User" />
           </el-form-item>
           <el-form-item prop="password">
             <el-input v-model="form.password" type="password" placeholder="请输入密码" prefix-icon="Lock" show-password />
@@ -56,16 +56,13 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { register } from '@/api/auth'
+import { register, registerSendCode } from '@/api/auth'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const formRef = ref(null)
 const loading = ref(false)
 const countdown = ref(0)
-
-// 前端模拟验证码：点击获取后生成随机 6 位数字
-const sentCode = ref('')
 
 const form = reactive({
   username: '', password: '', repassword: '', email: '', verification_code: ''
@@ -77,7 +74,7 @@ const validateRepassword = (rule, value, callback) => {
 }
 
 const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
   password: [{ required: true, min: 6, message: '密码不少于6位', trigger: 'blur' }],
   repassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
@@ -93,34 +90,31 @@ const rules = {
   ]
 }
 
-function handleSendCode() {
-  // 前端模拟生成验证码
-  const code = String(Math.floor(100000 + Math.random() * 900000))
-  sentCode.value = code
-  ElMessage.success(`验证码已发送：${code}（演示模式，后续对接后端邮件接口）`)
-  countdown.value = 60
-  const timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) clearInterval(timer)
-  }, 1000)
+async function handleSendCode() {
+  try {
+    await registerSendCode({ email: form.email })
+    ElMessage.success('验证码已发送至您的邮箱，请注意查收')
+    countdown.value = 60
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) clearInterval(timer)
+    }, 1000)
+  } catch (err) {
+    ElMessage.error(err.response?.data?.detail || '验证码发送失败')
+  }
 }
 
 async function handleRegister() {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
 
-  // 前端验证码校验
-  if (form.verification_code !== sentCode.value) {
-    ElMessage.error('验证码错误')
-    return
-  }
-
   loading.value = true
   try {
     await register({
       username: form.username,
       password: form.password,
-      email: form.email
+      email: form.email,
+      verification_code: form.verification_code
     })
     ElMessage.success('注册成功，请登录')
     router.push('/login')
@@ -136,30 +130,30 @@ async function handleRegister() {
 ::v-deep(.el-input__wrapper) {
   border-radius: 12px !important;
   box-shadow: none !important;
-  background: #f5f7fa !important;
+  background: #FEFDF8 !important;
   padding: 4px 16px !important;
   border: 1px solid transparent !important;
   transition: all 0.3s ease;
 }
 
 ::v-deep(.el-input__wrapper:hover) {
-  border-color: #d0d7de !important;
+  border-color: #A2D9F0 !important;
 }
 
 ::v-deep(.el-input__wrapper.is-focus) {
-  border-color: #4a90e2 !important;
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1) !important;
+  border-color: #72a8c4 !important;
+  box-shadow: 0 0 0 3px rgba(114, 168, 196, 0.15) !important;
 }
 
 ::v-deep(.el-input__inner) {
   height: 46px;
   font-size: 14px;
-  color: #2d3748;
+  color: #2c3e50;
   background: transparent !important;
 }
 
 ::v-deep(.el-input__inner::placeholder) {
-  color: #a0aec0;
+  color: #919CA3;
 }
 
 ::v-deep(.el-select .el-input__wrapper) {
@@ -171,15 +165,15 @@ async function handleRegister() {
   height: 48px;
   font-size: 15px;
   font-weight: 600;
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%) !important;
+  background: linear-gradient(135deg, #72a8c4 0%, #5b93af 100%) !important;
   border: none !important;
-  box-shadow: 0 4px 16px rgba(74, 144, 226, 0.3) !important;
+  box-shadow: 0 4px 16px rgba(114, 168, 196, 0.35) !important;
   transition: all 0.3s ease;
 }
 
 ::v-deep(.el-button--primary:hover) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4) !important;
+  box-shadow: 0 6px 20px rgba(114, 168, 196, 0.45) !important;
 }
 
 ::v-deep(.el-link) {

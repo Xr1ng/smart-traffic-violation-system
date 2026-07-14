@@ -380,7 +380,7 @@ onUnmounted(() => {
   gap: 8px;
   flex: 1;
 }
-.step-num { color: #409eff; font-weight: bold; }
+.step-num { color: #72a8c4; font-weight: bold; }
 .detected-items { padding: 8px 0; }
 
 .review-panel { margin-top: 12px; }

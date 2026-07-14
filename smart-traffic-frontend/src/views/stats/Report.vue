@@ -22,9 +22,17 @@
         unlink-panels
       />
       <el-button
+        v-if="loading"
+        type="danger"
+        plain
+        @click="handleCancel"
+      >
+        取消生成
+      </el-button>
+      <el-button
+        v-else
         type="primary"
         :icon="report ? Refresh : Document"
-        :loading="loading"
         @click="handleGenerate"
       >
         {{ report ? '重新生成' : '生成报告' }}
@@ -162,16 +170,35 @@ const snapshot = computed(() => report.value?.statistics_snapshot ?? {
   overview: {}, violation_types: [], locations: []
 })
 
+let abortController = null
+
 async function handleGenerate() {
   errorMessage.value = ''
   loading.value = true
+  abortController = new AbortController()
   try {
-    const response = await generateReportApi(buildReportRequest(dateRange.value))
+    const response = await generateReportApi(buildReportRequest(dateRange.value), {
+      signal: abortController.signal,
+      timeout: 35000,
+    })
     report.value = response.data || response
   } catch (error) {
-    errorMessage.value = error.response?.data?.detail || '报告生成失败，请稍后重试'
+    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+      errorMessage.value = '报告生成已取消'
+    } else if (error?.code === 'ECONNABORTED' || error?.message?.includes('timeout')) {
+      errorMessage.value = '请求超时，请确认后端服务是否正常运行'
+    } else {
+      errorMessage.value = error.response?.data?.detail || '报告生成失败，请稍后重试'
+    }
   } finally {
     loading.value = false
+    abortController = null
+  }
+}
+
+function handleCancel() {
+  if (abortController) {
+    abortController.abort()
   }
 }
 

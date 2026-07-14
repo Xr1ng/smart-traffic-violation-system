@@ -177,8 +177,8 @@ async function handleSubmit() {
   background: #fafafa;
 }
 .upload-card:hover {
-  border-color: #409eff;
-  color: #409eff;
+  border-color: #72a8c4;
+  color: #72a8c4;
 }
 .preview-card {
   position: relative;

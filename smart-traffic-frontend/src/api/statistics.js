@@ -9,4 +9,5 @@ export const fetchByLocation = (params) => request.get('/statistics/by-location'
 export const fetchByType = (params) => request.get('/statistics/by-type', { params })
 export const fetchByTime = (params) => request.get('/statistics/by-time', { params })
 export const fetchRoadTimeHeatmap = (params) => request.get('/statistics/road-time-heatmap', { params })
-export const generateReport = (data) => request.post('/analysis/reports', data, { timeout: 35000 })
+export const generateReport = (data, options = {}) =>
+  request.post('/analysis/reports', data, { timeout: 35000, ...options })

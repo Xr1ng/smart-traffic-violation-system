@@ -2,7 +2,12 @@
   <div class="page-container">
     <div class="page-header">
       <h2 class="page-title">举报进度</h2>
-      <el-button type="primary" @click="router.push('/citizen/report')">发起新举报</el-button>
+      <div style="display:flex;gap:12px">
+        <el-button type="primary" @click="router.push('/citizen/report')">发起新举报</el-button>
+        <el-button type="success" @click="exportData" :disabled="list.length === 0">
+          <el-icon><Download /></el-icon>导出 Excel
+        </el-button>
+      </div>
     </div>
 
     <el-table :data="list" border stripe v-loading="loading">
@@ -55,6 +60,8 @@ import {
   loadProtectedMediaUrls,
   releaseProtectedMediaUrls
 } from '@/utils/contracts'
+import { exportToExcel, formatExportTime } from '@/utils/export'
+import { Download } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const list = ref([])
@@ -98,6 +105,23 @@ onUnmounted(() => {
   mediaRequestGuard.invalidate()
   list.value.forEach(item => releaseProtectedMediaUrls(item.media))
 })
+
+function exportData() {
+  const columns = [
+    { key: 'description', label: '举报描述', width: 30 },
+    { key: 'location_text', label: '违章地点', width: 24 },
+    { key: 'captured_at', label: '违章时间', width: 22 },
+    { key: 'status', label: '状态', width: 12 },
+    { key: 'reward', label: '奖励', width: 12 }
+  ]
+  const data = list.value.map(row => ({
+    ...row,
+    captured_at: formatExportTime(row.captured_at),
+    status: statusMap[row.status] || row.status,
+    reward: row.reward ? `+${row.reward}积分` : '—'
+  }))
+  exportToExcel(data, columns, `举报记录_${new Date().toISOString().slice(0, 10)}`)
+}
 </script>
 
 <style scoped>

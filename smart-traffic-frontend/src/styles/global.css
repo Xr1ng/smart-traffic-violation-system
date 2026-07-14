@@ -5,40 +5,39 @@
 }
 
 :root {
-  --bg-color: #f5f7fa;
-  --bg-card: #ffffff;
-  --text-color: #303133;
-  --text-secondary: #909399;
-  --border-color: #e6e6e6;
-  --header-bg: #ffffff;
-  --sidebar-bg: #304156;
+  --bg-color: #EBF3F7;
+  --bg-card: #FEFDF8;
+  --text-color: #2c3e50;
+  --text-secondary: #7d8a91;
+  --border-color: #c4dde8;
+  --header-bg: #FEFDF8;
+  --sidebar-bg: #3A5A68;
+  --el-color-primary: #5b93af;
 }
 
 html.dark {
-  /* 数字大屏深蓝配色 */
-  --bg-color: #0a1628;
-  --bg-card: #0f1d32;
-  --text-color: #e0e0e0;
-  --text-secondary: #8fa2b9;
-  --border-color: #1f3a60;
-  --header-bg: #0f1d32;
-  --sidebar-bg: #0a1628;
+  --bg-color: #1a1f24;
+  --bg-card: #242a30;
+  --text-color: #e8e8e8;
+  --text-secondary: #919CA3;
+  --border-color: #3a4249;
+  --header-bg: #242a30;
+  --sidebar-bg: #1a1f24;
 
-  /* 覆盖 Element Plus 暗色变量 */
-  --el-bg-color: #0f1d32;
-  --el-bg-color-page: #0a1628;
-  --el-bg-color-overlay: #132238;
-  --el-fill-color: #132238;
-  --el-fill-color-blank: #0f1d32;
-  --el-fill-color-light: #132238;
-  --el-fill-color-lighter: #1a2d4a;
-  --el-border-color: #1f3a60;
-  --el-border-color-light: #26436e;
-  --el-text-color-primary: #e0e0e0;
-  --el-text-color-regular: #c0c4cc;
-  --el-text-color-secondary: #8fa2b9;
-  --el-color-primary: #409eff;
-  --el-mask-color: rgba(10, 22, 40, 0.8);
+  --el-bg-color: #242a30;
+  --el-bg-color-page: #1a1f24;
+  --el-bg-color-overlay: #2a3239;
+  --el-fill-color: #2a3239;
+  --el-fill-color-blank: #242a30;
+  --el-fill-color-light: #2a3239;
+  --el-fill-color-lighter: #343d45;
+  --el-border-color: #3a4249;
+  --el-border-color-light: #454e56;
+  --el-text-color-primary: #e8e8e8;
+  --el-text-color-regular: #ccd0d4;
+  --el-text-color-secondary: #919CA3;
+  --el-color-primary: #72a8c4;
+  --el-mask-color: rgba(26, 31, 36, 0.8);
 }
 
 html, body, #app {
@@ -47,6 +46,21 @@ html, body, #app {
     'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   color: var(--text-color);
   background: var(--bg-color);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* 页面过渡动画 */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 a {
@@ -72,6 +86,29 @@ a {
   color: var(--text-color);
 }
 
+/* 侧边栏激活指示条 */
+.el-menu .el-menu-item.is-active {
+  position: relative;
+}
+.el-menu .el-menu-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 28px;
+  background: var(--el-color-primary, #72a8c4) !important;
+  border-radius: 0 4px 4px 0;
+  z-index: 1;
+  display: block;
+}
+
+/* 深色模式下卡片过渡 */
+.el-card {
+  transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
 /* 表格操作栏 */
 .table-toolbar {
   display: flex;
@@ -94,7 +131,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #eef2f7 0%, #e0e8f5 100%);
+  background: linear-gradient(135deg, #EBF3F7 0%, #D6EAF0 50%, #A2D9F0 100%);
   padding: 32px;
 }
 
@@ -104,8 +141,8 @@ a {
   max-width: 100%;
   border-radius: 28px;
   overflow: hidden;
-  box-shadow: 0 24px 80px rgba(26, 58, 107, 0.12);
-  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(145, 156, 163, 0.15);
+  background: #FEFDF8;
 }
 
 .auth-form-side {
@@ -114,7 +151,7 @@ a {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: #ffffff;
+  background: #FEFDF8;
 }
 
 .auth-brand {
@@ -123,7 +160,7 @@ a {
 
 .brand-label {
   font-size: 12px;
-  color: #8898aa;
+  color: #919CA3;
   text-transform: uppercase;
   letter-spacing: 2px;
   margin-bottom: 10px;
@@ -133,14 +170,14 @@ a {
 .auth-title {
   font-size: 36px;
   font-weight: 700;
-  color: #1a3a6b;
+  color: #2c3e50;
   margin-bottom: 8px;
   line-height: 1.2;
 }
 
 .auth-desc {
   font-size: 14px;
-  color: #a0aec0;
+  color: #919CA3;
   margin-bottom: 0;
 }
 
@@ -150,13 +187,13 @@ a {
   align-items: center;
   margin: 12px 0 20px;
   font-size: 13px;
-  color: #8898aa;
+  color: #919CA3;
 }
 
 .auth-footer {
   text-align: center;
   font-size: 13px;
-  color: #8898aa;
+  color: #919CA3;
   margin-top: 8px;
 }
 
@@ -167,7 +204,7 @@ a {
   justify-content: center;
   overflow: hidden;
   position: relative;
-  background: #d0e8f5;
+  background: #D6EAF0;
 }
 
 .auth-visual-side img {

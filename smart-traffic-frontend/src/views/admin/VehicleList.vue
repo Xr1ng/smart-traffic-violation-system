@@ -15,10 +15,10 @@
     </div>
 
     <!-- 表格 -->
-    <el-table :data="list" border stripe v-loading="loading">
+    <el-table :data="listWithOwner" border stripe v-loading="loading">
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="plate_no" label="车牌号" width="130" />
-      <el-table-column prop="owner_id" label="车主 ID" width="100" />
+      <el-table-column prop="owner_name" label="车主姓名" width="120" />
       <el-table-column prop="vehicle_type" label="车辆类型" min-width="140" />
       <el-table-column prop="color" label="颜色" width="100" />
       <el-table-column prop="created_at" label="创建时间" width="180">
@@ -48,8 +48,21 @@
         <el-form-item label="车牌号" prop="plate_no">
           <el-input v-model="form.plate_no" />
         </el-form-item>
-        <el-form-item label="车主 ID" prop="owner_id">
-          <el-input-number v-model="form.owner_id" :min="1" :controls="false" clearable style="width:100%" />
+        <el-form-item label="用户姓名" prop="owner_id">
+          <el-select
+            v-model="form.owner_id"
+            placeholder="请选择用户"
+            filterable
+            clearable
+            style="width:100%"
+          >
+            <el-option
+              v-for="u in userList"
+              :key="u.id"
+              :label="u.username"
+              :value="u.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="车辆类型" prop="vehicle_type">
           <el-input v-model="form.vehicle_type" />
@@ -70,7 +83,9 @@
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getVehicles, createVehicle, updateVehicle } from '@/api/vehicle'
+import { fetchUsers } from '@/api/system'
 import { buildVehiclePayload, buildVehicleQuery } from '@/utils/contracts'
+
 
 const list = ref([])
 const loading = ref(false)
@@ -78,6 +93,14 @@ const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const search = reactive({ plate: '' })
+const userList = ref([])
+
+const listWithOwner = computed(() =>
+  list.value.map(v => ({
+    ...v,
+    owner_name: userList.value.find(u => u.id === v.owner_id)?.username || '—'
+  }))
+)
 
 const dialogVisible = ref(false)
 const formRef = ref(null)
@@ -94,7 +117,7 @@ const rules = computed(() => ({
   plate_no: [{ required: true, message: '请输入车牌号', trigger: 'blur' }],
   owner_id: editingId.value
     ? []
-    : [{ required: true, message: '请输入车主 ID', trigger: 'change' }]
+    : [{ required: true, message: '请选择用户', trigger: 'change' }]
 }))
 
 function formatTime(value) {
@@ -109,12 +132,20 @@ async function fetchList() {
     total.value = res.data.total
   } catch { /* handled by interceptor */ }
   finally { loading.value = false }
+  if (!userList.value.length) loadUserList()
 }
 
 function resetSearch() {
   search.plate = ''
   page.value = 1
   fetchList()
+}
+
+async function loadUserList() {
+  try {
+    const res = await fetchUsers({ page: 1, page_size: 100, role: 'citizen' })
+    userList.value = res.data.items || []
+  } catch { /* handled by interceptor */ }
 }
 
 function openDialog(row) {
@@ -128,6 +159,7 @@ function openDialog(row) {
       }
     : { plate_no: '', owner_id: null, vehicle_type: '', color: '' })
   dialogVisible.value = true
+  if (!editingId.value) { loadUserList() }
   nextTick(() => formRef.value?.clearValidate())
 }
 

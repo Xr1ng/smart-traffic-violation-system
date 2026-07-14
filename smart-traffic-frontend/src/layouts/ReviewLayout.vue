@@ -12,10 +12,15 @@
         :collapse="isCollapse"
         :collapse-transition="false"
         background-color="transparent"
-        text-color="#bfcbd9"
-        active-text-color="#409EFF"
+        text-color="#C8DDE4"
+        active-text-color="#A2D9F0"
         class="sidebar-menu"
       >
+        <el-menu-item index="/review/upload" @click="nav('/review/upload')">
+          <el-icon><Upload /></el-icon>
+          <template #title>证据上传</template>
+        </el-menu-item>
+
         <el-menu-item index="/review/workbench" @click="nav('/review/workbench')">
           <el-icon><Checked /></el-icon>
           <template #title>案件审核</template>
@@ -23,12 +28,7 @@
 
         <el-menu-item index="/review/violations" @click="nav('/review/violations')">
           <el-icon><List /></el-icon>
-          <template #title>违章记录</template>
-        </el-menu-item>
-
-        <el-menu-item index="/review/upload" @click="nav('/review/upload')">
-          <el-icon><Upload /></el-icon>
-          <template #title>证据上传</template>
+          <template #title>违章列表</template>
         </el-menu-item>
 
         <el-menu-item index="/stats" @click="nav('/stats')">
@@ -52,32 +52,18 @@
           </el-icon>
           <span class="page-name">{{ route.meta.title }}</span>
         </div>
-        <div class="header-right">
-          <el-icon class="theme-toggle" :size="20" @click="themeStore.isDark = !themeStore.isDark">
-            <Moon v-if="themeStore.isDark" />
-            <Sunny v-else />
-          </el-icon>
-          <el-dropdown>
-            <span class="user-info">
-              {{ userStore.userInfo?.username || '工作人员' }}
-              <el-icon><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="router.push('/review/profile')">
-                  <el-icon><User /></el-icon>个人信息
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">
-                  <el-icon><SwitchButton /></el-icon>退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
+        <HeaderActions profile-path="/review/profile" default-name="工作人员" />
       </el-header>
 
       <el-main class="main-content">
-        <router-view />
+        <router-view v-slot="{ Component, route: r }">
+          <Transition name="page-fade" mode="out-in">
+            <keep-alive :include="cachedViews">
+              <component :is="Component" :key="r.path" />
+            </keep-alive>
+          </Transition>
+        </router-view>
+        <BackToTop />
       </el-main>
     </el-container>
   </el-container>
@@ -87,15 +73,25 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { useThemeStore } from '@/stores/theme'
-import { Moon, Sunny } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
+import HeaderActions from '@/components/HeaderActions.vue'
+import BackToTop from '@/components/BackToTop.vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-const themeStore = useThemeStore()
 const isCollapse = ref(false)
+
+const cachedViews = computed(() => {
+  const names = []
+  const collect = (routes) => {
+    for (const r of routes) {
+      if (r.children) collect(r.children)
+      if (r.meta?.keepAlive && r.name) names.push(r.name)
+    }
+  }
+  collect(router.options.routes)
+  return names
+})
 
 const activeMenu = computed(() => {
   const p = route.path
@@ -106,13 +102,6 @@ const activeMenu = computed(() => {
 
 function nav(path) {
   if (route.path !== path) router.push(path).catch(() => {})
-}
-
-function handleLogout() {
-  ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning' }).then(() => {
-    userStore.logout()
-    router.push('/login')
-  })
 }
 </script>
 
@@ -150,7 +139,7 @@ function handleLogout() {
   background: rgba(255, 255, 255, 0.08) !important;
 }
 .sidebar-menu .el-menu-item.is-active {
-  background: rgba(64, 158, 255, 0.12) !important;
+  background: rgba(162, 217, 240, 0.15) !important;
 }
 .header {
   display: flex;
@@ -164,13 +153,10 @@ function handleLogout() {
 .header-left { display: flex; align-items: center; gap: 12px; }
 .collapse-btn { font-size: 20px; cursor: pointer; }
 .page-name { font-size: 16px; font-weight: 500; }
-.header-right { display: flex; align-items: center; gap: 16px; }
-.user-info { cursor: pointer; display: flex; align-items: center; gap: 4px; }
-.theme-toggle { cursor: pointer; color: var(--text-secondary); }
-.theme-toggle:hover { color: var(--text-color); }
 .main-content {
   background: var(--bg-color);
   padding: 20px;
   overflow-y: auto;
+  position: relative;
 }
 </style>

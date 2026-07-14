@@ -43,7 +43,7 @@
         <el-form-item v-if="!dialog.isEdit" label="密码" prop="password">
           <el-input v-model="dialog.form.password" type="password" show-password />
         </el-form-item>
-        <el-form-item label="手机号">
+        <el-form-item v-if="!dialog.isEdit" label="手机号">
           <el-input v-model="dialog.form.phone" />
         </el-form-item>
         <el-form-item label="邮箱">

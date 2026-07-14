@@ -1,9 +1,10 @@
 <template>
   <el-container class="citizen-layout">
     <!-- 左侧侧边栏 -->
-    <el-aside width="200px" class="sidebar">
+    <el-aside :width="isCollapse ? '64px' : '200px'" class="sidebar">
       <div class="sidebar-logo" @click="router.push('/citizen/home')">
-        <h3>🚦 交通违章</h3>
+        <h3 v-if="!isCollapse">🚦 交通违章</h3>
+        <span v-else>🚦</span>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -45,32 +46,18 @@
           </el-icon>
           <span class="breadcrumb">市民服务平台</span>
         </div>
-        <div class="header-right">
-          <el-icon class="theme-toggle" :size="20" @click="themeStore.isDark = !themeStore.isDark">
-            <Moon v-if="themeStore.isDark" />
-            <Sunny v-else />
-          </el-icon>
-          <el-dropdown>
-            <span class="user-info">
-              {{ userStore.userInfo?.username || '用户' }}
-              <el-icon><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="router.push('/citizen/profile')">
-                  <el-icon><User /></el-icon>个人信息
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">
-                  <el-icon><SwitchButton /></el-icon>退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
+        <HeaderActions profile-path="/citizen/profile" default-name="用户" />
       </el-header>
 
       <el-main>
-        <router-view />
+        <router-view v-slot="{ Component, route: r }">
+          <Transition name="page-fade" mode="out-in">
+            <keep-alive :include="cachedViews">
+              <component :is="Component" :key="r.path" />
+            </keep-alive>
+          </Transition>
+        </router-view>
+        <BackToTop />
       </el-main>
     </el-container>
   </el-container>
@@ -79,30 +66,30 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useUserStore } from '@/stores/user'
-import { useThemeStore } from '@/stores/theme'
+import HeaderActions from '@/components/HeaderActions.vue'
+import BackToTop from '@/components/BackToTop.vue'
 import {
-  Moon, Sunny, Fold, Expand, ArrowDown, User, SwitchButton,
-  HomeFilled, WarningFilled, Camera, List, Van
+  Fold, Expand, HomeFilled, WarningFilled, Camera, List, Van
 } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
-const userStore = useUserStore()
-const themeStore = useThemeStore()
 const isCollapse = ref(false)
+
+const cachedViews = computed(() => {
+  const names = []
+  const collect = (routes) => {
+    for (const r of routes) {
+      if (r.children) collect(r.children)
+      if (r.meta?.keepAlive && r.name) names.push(r.name)
+    }
+  }
+  collect(router.options.routes)
+  return names
+})
 
 const activeMenu = computed(() => route.path)
 
-function handleLogout() {
-  ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-    type: 'warning'
-  }).then(() => {
-    userStore.logout()
-    router.push('/login')
-  })
-}
 </script>
 
 <style scoped>
@@ -111,6 +98,7 @@ function handleLogout() {
   background: var(--header-bg);
   border-right: 1px solid var(--border-color);
   transition: width 0.3s;
+  overflow: hidden;
 }
 .sidebar-logo {
   height: 60px;
@@ -167,27 +155,10 @@ function handleLogout() {
   font-size: 15px;
   color: var(--text-color);
 }
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.theme-toggle {
-  cursor: pointer;
-  color: var(--text-secondary);
-}
-.theme-toggle:hover { color: var(--text-color); }
-.user-info {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  color: var(--text-color);
-}
 .el-main {
   min-height: calc(100vh - 60px);
   background: var(--bg-color);
   padding: 16px;
+  position: relative;
 }
 </style>

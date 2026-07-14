@@ -45,7 +45,7 @@
               <span>我的违章</span>
             </div>
             <div class="quick-link" @click="router.push('/citizen/my-reports')">
-              <el-icon :size="28" color="#409eff"><List /></el-icon>
+              <el-icon :size="28" color="#72a8c4"><List /></el-icon>
               <span>举报进度</span>
             </div>
             <div class="quick-link" @click="router.push('/citizen/vehicles')">
@@ -82,7 +82,7 @@
             <el-col :span="6" :xs="12">
               <div class="stat-card">
                 <div class="stat-label">绑定车辆</div>
-                <div class="stat-num" style="color:#409eff">{{ stats.vehicles }}</div>
+                <div class="stat-num" style="color:#72a8c4">{{ stats.vehicles }}</div>
               </div>
             </el-col>
           </el-row>
@@ -100,6 +100,7 @@ import { fetchOwnerViolations } from '@/api/violation'
 import { getMyVehicles } from '@/api/vehicle'
 import { useUserStore } from '@/stores/user'
 import { fetchAllCitizenCases, summarizeCitizenOverview } from '@/utils/contracts'
+import { fetchPublished } from '@/utils/announcements'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -121,6 +122,9 @@ async function loadOverview() {
     ])
     Object.assign(stats, summarizeCitizenOverview(violations.data, cases, vehicles.data))
   } catch {}
+
+  // 加载已发布的公告
+  announcements.value = fetchPublished()
 }
 
 onMounted(loadOverview)
