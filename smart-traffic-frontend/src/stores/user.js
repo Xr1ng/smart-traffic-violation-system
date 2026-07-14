@@ -39,6 +39,15 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  function setUserInfo(info) {
+    userInfo.value = info
+    if (info?.role_code) {
+      role.value = info.role_code
+      localStorage.setItem('role', info.role_code)
+    }
+    localStorage.setItem('userInfo', JSON.stringify(info))
+  }
+
   function logout() {
     token.value = ''
     userInfo.value = null
@@ -46,5 +55,5 @@ export const useUserStore = defineStore('user', () => {
     localStorage.clear()
   }
 
-  return { token, userInfo, role, homePath, login, restoreLoginState, logout }
+  return { token, userInfo, role, homePath, login, restoreLoginState, setUserInfo, logout }
 })

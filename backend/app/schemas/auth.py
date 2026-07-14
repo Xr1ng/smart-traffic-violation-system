@@ -20,6 +20,8 @@ class UserOut(BaseModel):
     id: int
     username: str
     role_code: str
+    phone: str | None = None
+    email: str
 
     model_config = {"from_attributes": True}
 

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test tests/contracts.test.js tests/email-auth-flow.test.js",
+    "test": "node --test tests/contracts.test.js tests/email-auth-flow.test.js tests/selective-integration.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

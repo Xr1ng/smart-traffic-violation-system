@@ -28,7 +28,13 @@ def test_me_requires_auth(client):
 def test_me_returns_user(client, citizen_user, auth_headers):
     response = client.get("/api/v1/auth/me", headers=auth_headers)
     assert response.status_code == 200
-    assert response.json()["username"] == "citizen1"
+    assert response.json() == {
+        "id": citizen_user.id,
+        "username": "citizen1",
+        "role_code": "citizen",
+        "phone": citizen_user.phone,
+        "email": "citizen@example.com",
+    }
 
 
 def test_menus_returns_role_menus(client, citizen_user, auth_headers):
@@ -145,10 +151,14 @@ def test_register_invalid_code_400(client, db, seeded_roles):
 
 
 def test_update_profile(client, citizen_user, auth_headers):
-    resp = client.put("/api/v1/auth/profile", headers=auth_headers,
-                      json={"phone": "1390000", "email": "updated@e.com"})
-    assert resp.status_code == 200
-    assert resp.json()["username"] == "citizen1"
+    response = client.put(
+        "/api/v1/auth/profile",
+        headers=auth_headers,
+        json={"phone": "1390000", "email": " Updated@Example.COM "},
+    )
+    assert response.status_code == 200
+    assert response.json()["phone"] == "1390000"
+    assert response.json()["email"] == "updated@example.com"
 
 
 def test_change_password(client, citizen_user, auth_headers):

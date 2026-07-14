@@ -31,6 +31,16 @@ from app.services.notification_service import NotificationService
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _user_out(user: User) -> UserOut:
+    return UserOut(
+        id=user.id,
+        username=user.username,
+        role_code=user.role.code,
+        phone=user.phone,
+        email=user.email,
+    )
+
+
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     user = db.query(User).filter(User.username == body.username).first()
@@ -45,7 +55,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     )
     return TokenResponse(
         access_token=token,
-        user=UserOut(id=user.id, username=user.username, role_code=user.role.code),
+        user=_user_out(user),
     )
 
 
@@ -59,7 +69,7 @@ ROLE_MENUS: dict[str, list[str]] = {
 
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)) -> UserOut:
-    return UserOut(id=user.id, username=user.username, role_code=user.role.code)
+    return _user_out(user)
 
 
 permissions_router = APIRouter(prefix="/permissions", tags=["permissions"])
@@ -136,7 +146,7 @@ def register(
     )
     return TokenResponse(
         access_token=token,
-        user=UserOut(id=user.id, username=user.username, role_code=user.role.code),
+        user=_user_out(user),
     )
 
 
@@ -208,7 +218,7 @@ def update_profile(body: ProfileUpdateRequest, user: User = Depends(get_current_
         db.rollback()
         raise HTTPException(status_code=409, detail="邮箱已存在")
     db.refresh(user)
-    return UserOut(id=user.id, username=user.username, role_code=user.role.code)
+    return _user_out(user)
 
 
 @router.put("/password")
