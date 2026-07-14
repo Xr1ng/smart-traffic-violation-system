@@ -20,6 +20,10 @@
             />
           </el-form-item>
 
+          <div v-if="step === 'reset'" class="change-email-row">
+            <el-button link type="primary" @click="handleChangeEmail">更换邮箱</el-button>
+          </div>
+
           <template v-if="step === 'reset'">
             <el-form-item prop="verification_code">
               <div class="code-row">
@@ -156,6 +160,15 @@ function startCountdown() {
 
 onBeforeUnmount(stopCountdown)
 
+function handleChangeEmail() {
+  stopCountdown()
+  countdown.value = 0
+  form.verification_code = ''
+  form.new_password = ''
+  form.confirm_password = ''
+  step.value = 'email'
+}
+
 async function handleSendCode() {
   const valid = await formRef.value.validateField('email')
     .then(() => true)
@@ -239,6 +252,12 @@ async function handleResetPassword() {
 
 .code-row .el-button {
   height: 48px;
+}
+
+.change-email-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -14px 0 8px;
 }
 
 .submit-button {
