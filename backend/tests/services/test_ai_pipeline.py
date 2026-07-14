@@ -5,6 +5,111 @@ from app.ai.adapters.base import AIReviewResultData, DetectionResult, RuleResult
 from app.services import ai_pipeline
 
 
+def test_ai_pipeline_persists_yolo_then_ocr_before_llm(
+    db, pending_case, tmp_path, monkeypatch,
+):
+    from app.models.intake import MediaAsset
+    from PIL import Image
+
+    Image.new("RGB", (120, 100), "white").save(tmp_path / "frame.jpg")
+    (tmp_path / "annotated.jpg").write_bytes(b"annotated")
+    pending_case.intake_event.reported_violation_type = "illegal_stop"
+    db.commit()
+    primary_target = {
+        "violation_type": "illegal_stop",
+        "vehicle": {
+            "label": "cars",
+            "confidence": 0.91,
+            "bbox": [10, 10, 110, 90],
+            "model": "vehicle",
+            "detection_id": "vehicle-1",
+            "display_label": "car1",
+        },
+        "confidence": 0.86,
+        "association_score": 0.95,
+        "evidence_bbox": [10, 10, 110, 90],
+        "evidence_model": "illegal_stop",
+        "is_primary": True,
+    }
+
+    monkeypatch.setattr(ai_pipeline._settings, "MEDIA_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        ai_pipeline,
+        "_detector",
+        lambda: SimpleNamespace(detect=lambda _path, _type: DetectionResult(
+            objects=[{
+                "label": "cars",
+                "confidence": 0.91,
+                "bbox": [10, 10, 110, 90],
+                "model": "vehicle",
+            }],
+            vehicle_bbox=[10, 10, 110, 90],
+            plate_bbox=[40, 60, 80, 78],
+            annotated_image_path="/media/annotated.jpg",
+            model_version="test-model",
+            requested_violation_type="illegal_stop",
+            violation_targets=[primary_target],
+            primary_target=primary_target,
+        )),
+    )
+
+    def recognize_plate(_path):
+        db.refresh(pending_case)
+        yolo_result = json.loads(pending_case.ai_result_json)
+        assert pending_case.status == "detecting"
+        assert yolo_result["objects"][0]["label"] == "cars"
+        assert yolo_result["plate_status"] == "ocr_pending"
+        assert db.query(MediaAsset).filter_by(
+            intake_event_id=pending_case.intake_event_id,
+            asset_type="annotated",
+        ).one().url == "/media/annotated.jpg"
+        return "\u4eacA12345"
+
+    monkeypatch.setattr(
+        ai_pipeline,
+        "_ocr",
+        lambda: SimpleNamespace(recognize_plate=recognize_plate),
+    )
+    monkeypatch.setattr(
+        ai_pipeline,
+        "_evaluator",
+        lambda: SimpleNamespace(evaluate=lambda **_kwargs: RuleResult(
+            candidate_violation_type="illegal_stop",
+            rule_code="illegal_stop_model",
+            rule_matched=True,
+            evidence_level="partial",
+            evidence_items=["illegal_stop detection"],
+            missing_evidence=[],
+            reason="suspected illegal stop",
+        )),
+    )
+
+    def review(_payload):
+        db.refresh(pending_case)
+        local_result = json.loads(pending_case.ai_result_json)
+        assert pending_case.status == "ai_reviewing"
+        assert pending_case.plate_no == "\u4eacA12345"
+        assert local_result["plate_status"] == "recognized"
+        assert local_result["rule_matched"] is True
+        assert local_result["conclusion"] is None
+        return AIReviewResultData(
+            conclusion="need_review",
+            ai_confidence=0.7,
+            reason="manual review",
+            risk_points=[],
+            missing_evidence=[],
+            prompt_version="test-v1",
+        )
+
+    monkeypatch.setattr(ai_pipeline, "_llm", lambda: SimpleNamespace(review=review))
+
+    result = ai_pipeline.run_ai_pipeline(pending_case, "/media/frame.jpg")
+
+    assert result["plate_no"] == "\u4eacA12345"
+    assert result["conclusion"] == "need_review"
+    assert pending_case.status == "pending_human_review"
+
+
 def test_ai_pipeline_uses_reported_type_and_reports_yolo_plate_failure(
     db, pending_case, tmp_path, monkeypatch,
 ):

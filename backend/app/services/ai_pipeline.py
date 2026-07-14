@@ -18,6 +18,7 @@ from app.core.config import settings as _settings
 logger = logging.getLogger(__name__)
 
 PLATE_STATUS_MESSAGES = {
+    "ocr_pending": "OCR\u6b63\u5728\u8bc6\u522b\u8f66\u724c",
     "recognized": "车牌识别成功",
     "skipped_no_violation": "未检测到所选疑似违法，未执行车牌识别",
     "yolo_not_detected": "YOLO无法识别车牌/车牌模糊不清",
@@ -78,6 +79,29 @@ def _register_annotated_media(case: Case, annotated_url: str | None) -> None:
         asset.size = annotated_path.stat().st_size
 
 
+def _persist_pipeline_snapshot(
+    case: Case,
+    result: dict,
+    *,
+    status: str,
+    plate_no: str | None,
+    register_annotation: bool = False,
+) -> None:
+    from sqlalchemy.orm import Session
+
+    db = Session.object_session(case)
+    if db is None:
+        raise RuntimeError("Case is not attached to a database session")
+    if register_annotation:
+        _register_annotated_media(case, result.get("annotated_image_url"))
+    case.plate_no = plate_no
+    if result.get("candidate_violation_type"):
+        case.violation_type = result["candidate_violation_type"]
+    case.ai_result_json = json.dumps(result, ensure_ascii=False)
+    case.status = status
+    db.commit()
+
+
 def run_ai_pipeline(case: Case, image_relative_url: str) -> dict:
     """对已落盘的原图跑完整 AI 管线，结果写回 case 并 commit 到数据库。
     失败时 case 保持 uploaded 状态，不抛异常。
@@ -102,7 +126,8 @@ def run_ai_pipeline(case: Case, image_relative_url: str) -> dict:
               "candidate_violation_type": None,
               "rule_code": None,
               "evidence_items": [], "missing_evidence": [], "rule_reason": "",
-              "conclusion": "need_review", "ai_confidence": None, "review_reason": ""}
+              "conclusion": None, "ai_confidence": None, "review_reason": "",
+              "risk_points": [], "llm_status": "pending", "pipeline_stage": "started"}
 
     try:
         # ① YOLO 检测
@@ -120,9 +145,26 @@ def run_ai_pipeline(case: Case, image_relative_url: str) -> dict:
         plate_no = None
         plate_status = "skipped_no_violation"
         ocr_engine = "none"
-        if detection.primary_target is not None and not detection.plate_bbox:
+        has_plate_bbox = bool(detection.plate_bbox and len(detection.plate_bbox) == 4)
+        if detection.primary_target is not None and not has_plate_bbox:
             plate_status = "yolo_not_detected"
-        elif detection.primary_target is not None and detection.plate_bbox and len(detection.plate_bbox) == 4:
+        elif detection.primary_target is not None:
+            plate_status = "ocr_pending"
+        result["plate_no"] = plate_no
+        result["ocr_engine"] = ocr_engine
+        result["ocr_status"] = plate_status
+        result["plate_status"] = plate_status
+        result["plate_status_message"] = PLATE_STATUS_MESSAGES[plate_status]
+        result["pipeline_stage"] = "yolo_complete"
+        _persist_pipeline_snapshot(
+            case,
+            result,
+            status="detecting",
+            plate_no=None,
+            register_annotation=True,
+        )
+
+        if plate_status == "ocr_pending":
             plate_status = "ocr_failed"
             try:
                 from PIL import Image
@@ -169,40 +211,56 @@ def run_ai_pipeline(case: Case, image_relative_url: str) -> dict:
         result["rule_reason"] = rule.reason
         result["candidate_violation_type"] = rule.candidate_violation_type
         result["rule_code"] = rule.rule_code
+        result["pipeline_stage"] = "local_analysis_complete"
+        _persist_pipeline_snapshot(
+            case,
+            result,
+            status="ai_reviewing",
+            plate_no=plate_no,
+        )
 
         # ④ LLM 审查
-        llm = _llm()
-        review = llm.review({
-            "image_path": image_path,
-            "image_url": image_relative_url,
-            "reported_violation_type": reported_violation_type,
-            "detection_result": {"objects": detection.objects},
-            "rule_result": {
-                "rule_matched": rule.rule_matched,
-                "evidence_level": rule.evidence_level,
-                "evidence_items": result["evidence_items"],
-            },
-        })
-        result["conclusion"] = review.conclusion
-        result["ai_confidence"] = review.ai_confidence
-        result["review_reason"] = review.reason
-        result["risk_points"] = review.risk_points
-        result["missing_evidence"] = review.missing_evidence or result["missing_evidence"]
+        try:
+            llm = _llm()
+            review = llm.review({
+                "image_path": image_path,
+                "image_url": image_relative_url,
+                "reported_violation_type": reported_violation_type,
+                "detection_result": {"objects": detection.objects},
+                "rule_result": {
+                    "rule_matched": rule.rule_matched,
+                    "evidence_level": rule.evidence_level,
+                    "evidence_items": result["evidence_items"],
+                },
+            })
+            result["conclusion"] = review.conclusion
+            result["ai_confidence"] = review.ai_confidence
+            result["review_reason"] = review.reason
+            result["risk_points"] = review.risk_points
+            result["missing_evidence"] = review.missing_evidence or result["missing_evidence"]
+            result["llm_status"] = "completed"
+        except Exception as llm_error:
+            logger.exception("LLM review failed for case %s: %s", case.case_no, llm_error)
+            result["conclusion"] = "need_review"
+            result["ai_confidence"] = None
+            result["review_reason"] = f"LLM unavailable: {llm_error}"
+            result["risk_points"] = ["LLM call failed"]
+            result["llm_status"] = "failed"
         result["review_mode"] = "vision_llm" if _settings.LLM_MODE == "vision" else "text_llm"
+        result["pipeline_stage"] = "complete"
 
     except Exception as e:
         logger.exception("AI pipeline failed for case %s: %s", case.case_no, e)
         result["error"] = str(e)
+        result["conclusion"] = "need_review"
+        result["llm_status"] = "skipped"
         return result
 
     # 写回 Case
-    from sqlalchemy.orm import Session
-    db = Session.object_session(case)
-    _register_annotated_media(case, result.get("annotated_image_url"))
-    case.plate_no = plate_no
-    if result.get("candidate_violation_type"):
-        case.violation_type = result["candidate_violation_type"]
-    case.ai_result_json = json.dumps(result, ensure_ascii=False)
-    case.status = "pending_human_review"
-    db.commit()
+    _persist_pipeline_snapshot(
+        case,
+        result,
+        status="pending_human_review",
+        plate_no=plate_no,
+    )
     return result

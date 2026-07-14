@@ -562,7 +562,9 @@ citizen 只能看自己的；admin 可看任意。查他人→403。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/analysis/reports` | 生成报告 |
+| POST | `/analysis/reports` | 生成并保存报告 |
+| GET | `/analysis/reports` | 分页查询历史报告 |
+| GET | `/analysis/reports/{id}` | 获取历史报告详情 |
 
 ```json
 // 请求
@@ -571,6 +573,7 @@ citizen 只能看自己的；admin 可看任意。查他人→403。
 
 // 200
 {
+  "id": "a1b2c3d4e5f6",
   "title": "交通违章综合分析报告",
   "start_time": "2026-06-30T16:00:00Z",
   "end_time": "2026-07-31T15:59:59Z",
@@ -591,7 +594,38 @@ citizen 只能看自己的；admin 可看任意。查他人→403。
 }
 ```
 
-非法日期范围返回 `422`；LLM 未配置、超时或返回格式无效时返回 `503`。
+报告仅在 Markdown 文件原子写入成功后返回 `200`。非法日期范围返回 `422`；LLM 未配置、超时或返回格式无效时返回 `503`；报告保存失败返回 `500`。
+
+历史列表查询参数：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| `page` | int | 否 | 默认 1 |
+| `page_size` | int | 否 | 默认 20，范围 1～100 |
+| `start_time` | datetime | 否 | 与 `end_time` 成对提供 |
+| `end_time` | datetime | 否 | 返回统计周期与查询周期存在交集的报告 |
+
+```json
+// GET /analysis/reports?page=1&page_size=20
+{
+  "items": [
+    {
+      "id": "a1b2c3d4e5f6",
+      "title": "交通违章综合分析报告",
+      "start_time": "2026-06-30T16:00:00Z",
+      "end_time": "2026-07-31T15:59:59Z",
+      "generated_at": "2026-07-13T06:00:00Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+`GET /analysis/reports/{id}` 返回与生成接口相同的完整报告结构。ID 不存在或格式非法返回 `404`；文件损坏返回 `500`。接口不会返回服务器文件路径或原始 Markdown。
+
+历史报告由 admin/reviewer 共享，不记录发起用户，不提供修改、删除或下载 Markdown 接口。文件目录由 `REPORT_STORAGE_DIR` 配置，默认 `./reports`，报告永久保留并视为只读。
 
 ---
 

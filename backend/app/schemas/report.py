@@ -48,6 +48,25 @@ class ReportOut(BaseModel):
     generated_at: datetime
 
 
+class SavedReportOut(ReportOut):
+    id: str = Field(pattern=r"^[0-9a-f]{12}$")
+
+
+class ReportHistoryItem(BaseModel):
+    id: str = Field(pattern=r"^[0-9a-f]{12}$")
+    title: str
+    start_time: datetime
+    end_time: datetime
+    generated_at: datetime
+
+
+class ReportHistoryPage(BaseModel):
+    items: list[ReportHistoryItem] = Field(default_factory=list)
+    total: int
+    page: int
+    page_size: int
+
+
 def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60
     MEDIA_STORAGE_DIR: str = "./media"
+    REPORT_STORAGE_DIR: str = "./reports"
     MAX_IMAGE_SIZE: int = 10 * 1024 * 1024
     ALLOWED_IMAGE_TYPES: tuple[str, ...] = ("image/jpeg", "image/png", "image/webp")
     # 邮件通知（杨翼-8）
