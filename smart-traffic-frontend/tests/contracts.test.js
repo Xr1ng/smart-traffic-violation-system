@@ -214,6 +214,41 @@ test('builds exact review request bodies', () => {
   assert.deepEqual(buildRejectPayload(form), { reject_reason: '证据清晰' })
 })
 
+test('builds exact announcement payloads from editable fields', () => {
+  assert.deepEqual(contracts.buildAnnouncementPayload({
+    id: 9,
+    title: ' 系统维护 ',
+    content: ' 今晚 22:00 维护。 ',
+    created_at: 'ignored'
+  }), {
+    title: '系统维护',
+    content: '今晚 22:00 维护。'
+  })
+})
+
+test('announcements use exact API routes and a shared accessible header entry', async () => {
+  const apiSource = await readFile(new URL('../src/api/announcement.js', import.meta.url), 'utf8')
+  const bellSource = await readFile(new URL('../src/components/AnnouncementBell.vue', import.meta.url), 'utf8')
+
+  assert.match(apiSource, /request\.get\('\/announcements', \{ params \}\)/)
+  assert.match(apiSource, /request\.get\(`\/announcements\/\$\{id\}`\)/)
+  assert.match(apiSource, /request\.post\('\/admin\/announcements', data\)/)
+  assert.match(apiSource, /request\.patch\(`\/admin\/announcements\/\$\{id\}`, data\)/)
+  assert.match(apiSource, /request\.delete\(`\/admin\/announcements\/\$\{id\}`\)/)
+
+  assert.match(bellSource, /fetchAnnouncements\(\{ page: 1, page_size: 5 \}\)/)
+  assert.match(bellSource, /<el-tooltip/)
+  assert.match(bellSource, /aria-label="系统公告"/)
+  assert.match(bellSource, /<Bell \/>/)
+  assert.doesNotMatch(bellSource, /<el-badge/)
+
+  for (const layout of ['CitizenLayout', 'ReviewLayout', 'AdminLayout']) {
+    const source = await readFile(new URL(`../src/layouts/${layout}.vue`, import.meta.url), 'utf8')
+    assert.match(source, /<AnnouncementBell \/>/)
+    assert.match(source, /import AnnouncementBell from '@\/components\/AnnouncementBell\.vue'/)
+  }
+})
+
 test('keeps admin report navigation inside admin routes', () => {
   assert.equal(reportPathForRoute('/admin/stats'), '/admin/stats/report')
   assert.equal(reportPathForRoute('/stats'), '/stats/report')

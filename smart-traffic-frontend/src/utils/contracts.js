@@ -98,6 +98,13 @@ export function buildRejectPayload(form) {
   return { reject_reason: form.review_opinion }
 }
 
+export function buildAnnouncementPayload(form) {
+  return {
+    title: form.title.trim(),
+    content: form.content.trim()
+  }
+}
+
 export function reportPathForRoute(path) {
   return path.startsWith('/admin/') ? '/admin/stats/report' : '/stats/report'
 }

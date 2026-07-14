@@ -53,6 +53,7 @@
           <span class="page-name">{{ route.meta.title }}</span>
         </div>
         <div class="header-right">
+          <AnnouncementBell />
           <el-icon class="theme-toggle" :size="20" @click="themeStore.isDark = !themeStore.isDark">
             <Moon v-if="themeStore.isDark" />
             <Sunny v-else />
@@ -90,6 +91,7 @@ import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
+import AnnouncementBell from '@/components/AnnouncementBell.vue'
 
 const router = useRouter()
 const route = useRoute()
