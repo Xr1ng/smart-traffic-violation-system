@@ -305,7 +305,7 @@ smart-traffic-violation-system/
 
 ### 启用 LLM 分析报告
 
-统计分析页支持按日期范围汇总真实业务数据，并由 OpenAI-compatible 文本模型生成结构化中文报告。报告可在浏览器中打印或另存为 PDF，不会保存到数据库。
+统计分析页支持按日期范围汇总真实业务数据，并由 OpenAI-compatible 文本模型生成结构化中文报告。每次成功生成的报告都会保存为后端 Markdown 文件，可通过网页右侧的“历史报告”抽屉按统计周期查询、重新打开、打印或另存为 PDF。
 
 在 `backend/.env` 中配置：
 
@@ -316,9 +316,12 @@ LLM_API_KEY=替换为实际密钥
 LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
 LLM_TEXT_MODEL=glm-5.1
 LLM_TIMEOUT_SECONDS=30
+REPORT_STORAGE_DIR=./reports
 ```
 
 `LLM_PROVIDER` 也可填写 `openai_compatible` 并配套修改地址与模型。未配置真实 LLM 时，报告接口会返回服务不可用提示，不会生成占位报告。
+
+`REPORT_STORAGE_DIR` 指向报告持久化目录，默认相对于后端进程工作目录的 `./reports`。报告使用 UTF-8 Markdown 保存，文件包含隐藏的完整结构化数据和可读正文；文件由系统永久保留并视为只读，不支持通过网页编辑或删除。部署到容器时应将该目录映射到持久化磁盘。
 
 ---
 

@@ -10,3 +10,5 @@ export const fetchByType = (params) => request.get('/statistics/by-type', { para
 export const fetchByTime = (params) => request.get('/statistics/by-time', { params })
 export const fetchRoadTimeHeatmap = (params) => request.get('/statistics/road-time-heatmap', { params })
 export const generateReport = (data) => request.post('/analysis/reports', data, { timeout: 35000 })
+export const fetchReportHistory = (params) => request.get('/analysis/reports', { params })
+export const fetchReportDetail = (id) => request.get(`/analysis/reports/${id}`)

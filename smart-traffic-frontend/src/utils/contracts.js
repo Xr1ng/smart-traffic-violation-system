@@ -116,6 +116,12 @@ export function buildReportRequest(dateRange) {
   return { start_time: start.toISOString(), end_time: end.toISOString() }
 }
 
+export function buildReportHistoryQuery(dateRange, page = 1, pageSize = 20) {
+  const query = { page, page_size: pageSize }
+  if (!Array.isArray(dateRange) || dateRange.length === 0) return query
+  return { ...query, ...buildReportRequest(dateRange) }
+}
+
 export function buildReportRoute(path, dateRange) {
   return {
     path: reportPathForRoute(path),

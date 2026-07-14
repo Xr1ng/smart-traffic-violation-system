@@ -7,6 +7,7 @@ import * as contracts from '../src/utils/contracts.js'
 import {
   buildApprovePayload,
   buildRejectPayload,
+  buildReportHistoryQuery,
   buildReportRequest,
   buildReportRoute,
   buildViolationQuery,
@@ -236,6 +237,22 @@ test('carries the selected full-day range into the report route', () => {
   ]), route.query)
 })
 
+test('builds paged history queries with an independent full-day filter', () => {
+  assert.deepEqual(buildReportHistoryQuery([], 2, 20), {
+    page: 2,
+    page_size: 20
+  })
+  assert.deepEqual(buildReportHistoryQuery([
+    new Date('2026-07-01T10:00:00+08:00'),
+    new Date('2026-07-15T12:00:00+08:00')
+  ], 3, 10), {
+    page: 3,
+    page_size: 10,
+    start_time: '2026-06-30T16:00:00.000Z',
+    end_time: '2026-07-15T15:59:59.999Z'
+  })
+})
+
 test('describes missing AI results according to case processing state', () => {
   assert.equal(caseAiFallbackText('detecting'), 'AI 处理中...')
   assert.equal(caseAiFallbackText('ai_reviewing'), 'AI 处理中...')
@@ -416,6 +433,23 @@ test('AI report page generates only on user action and supports print export', a
   assert.doesNotMatch(source, /onMounted\([^)]*handleGenerate/)
   assert.match(dashboardSource, /buildReportRoute\(route\.path, dateRange\)/)
   assert.match(apiSource, /analysis\/reports[^\n]+timeout: 35000/)
+})
+
+test('AI report page loads history in a drawer without changing generation dates', async () => {
+  const source = await readFile(new URL('../src/views/stats/Report.vue', import.meta.url), 'utf8')
+  const apiSource = await readFile(new URL('../src/api/statistics.js', import.meta.url), 'utf8')
+
+  assert.match(source, /历史报告/)
+  assert.match(source, /<el-drawer/)
+  assert.match(source, /historyDateRange/)
+  assert.match(source, /fetchReportHistoryApi/)
+  assert.match(source, /fetchReportDetailApi/)
+  assert.match(source, /handleSelectHistory/)
+  assert.match(source, /report\.value\s*=\s*response\.data\s*\|\|\s*response\s*\n\s*errorMessage\.value\s*=\s*''/)
+  assert.match(source, />\s*生成新报告\s*</)
+  assert.doesNotMatch(source, /dateRange\.value\s*=.*selectedReport/)
+  assert.match(apiSource, /fetchReportHistory[^\n]+request\.get\('\/analysis\/reports'/)
+  assert.match(apiSource, /fetchReportDetail[^\n]+request\.get\(`\/analysis\/reports\/\$\{id\}`\)/)
 })
 
 test('manual evidence uploads require and submit a supported violation type', async () => {

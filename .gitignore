@@ -13,6 +13,7 @@ dist/
 
 # Runtime data (uploaded images, local DB）
 media/
+reports/
 uploads/*
 !uploads/.gitkeep
 *.db
