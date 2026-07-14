@@ -176,3 +176,20 @@ test('batch reject requires a reason and workbench has no batch approve', async 
   assert.match(workbench, /rejectCase/)
   assert.doesNotMatch(workbench, /batchApprove|批量通过/)
 })
+
+test('announcement administration uses backend CRUD without publish state', async () => {
+  const announcement = await source('../src/views/admin/Announcement.vue')
+  for (const api of [
+    'fetchAnnouncements',
+    'createAnnouncement',
+    'updateAnnouncement',
+    'deleteAnnouncement'
+  ]) {
+    assert.match(announcement, new RegExp(api))
+  }
+  assert.match(announcement, /buildAnnouncementPayload\(form\)/)
+  assert.match(announcement, /<el-pagination/)
+  assert.match(announcement, /openEdit/)
+  assert.match(announcement, /removeAnnouncement/)
+  assert.doesNotMatch(announcement, /UnderDevelopment|localStorage|is_published/)
+})
