@@ -15,7 +15,8 @@ def test_owner_violations_empty(client, citizen_user, auth_headers):
 
 def test_owner_violations_citizen_other_403(client, db, citizen_user, auth_headers, seeded_roles):
     from app.models.user import User
-    other = User(username="citizen2", password_hash="h", role_id=seeded_roles["citizen"].id)
+    other = User(username="citizen2", password_hash="h", email="citizen2@example.com",
+                 role_id=seeded_roles["citizen"].id)
     db.add(other)
     db.flush()  # brief 漏写持久化：不 flush 则 other.id 为 None，other.id + 9999 会 TypeError
     # citizen_user 用自己的 token 查他人的 owner_id → 403

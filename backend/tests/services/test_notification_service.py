@@ -1,6 +1,10 @@
 # tests/services/test_notification_service.py
 from app.models.violation import Notification, NotificationTemplate, Violation
-from app.services.notification_provider import FakeNotificationProvider
+from app.services.notification_provider import (
+    FakeNotificationProvider,
+    NotificationProvider,
+    SendResult,
+)
 from app.services.notification_service import NotificationService
 
 
@@ -31,3 +35,84 @@ def test_send_without_owner_email_records_failed(db):
     n = svc.send_violation_notification(v, None)
     assert n.status == "failed"
     assert n.recipient is None
+
+
+def test_send_template_logs_redacted_auth_content(db):
+    db.add(NotificationTemplate(
+        code="register_email_code",
+        channel="email",
+        subject_template="验证码",
+        body_template="验证码 {code}",
+    ))
+    db.commit()
+    provider = FakeNotificationProvider()
+
+    result = NotificationService(db, provider).send_template(
+        "register_email_code",
+        "user@example.com",
+        {"code": "123456"},
+        audit_content="注册邮箱验证码邮件",
+    )
+
+    assert result.status == "sent"
+    assert result.template_code == "register_email_code"
+    assert result.content == "注册邮箱验证码邮件"
+    assert "123456" not in result.content
+    assert provider.sent == [("user@example.com", "验证码", "验证码 123456")]
+
+
+def test_send_template_missing_template_records_failure(db):
+    provider = FakeNotificationProvider()
+
+    result = NotificationService(db, provider).send_template(
+        "missing", "user@example.com", {}, audit_content="邮件"
+    )
+
+    assert result.status == "failed"
+    assert "template_missing" in result.content
+    assert provider.sent == []
+
+
+def test_send_template_render_error_does_not_send(db):
+    db.add(NotificationTemplate(
+        code="register_email_code",
+        channel="email",
+        subject_template="验证码",
+        body_template="验证码 {code}",
+    ))
+    db.commit()
+    provider = FakeNotificationProvider()
+
+    result = NotificationService(db, provider).send_template(
+        "register_email_code", "user@example.com", {}, audit_content="邮件"
+    )
+
+    assert result.status == "failed"
+    assert "template_render_failed" in result.content
+    assert provider.sent == []
+
+
+class FailingProvider(NotificationProvider):
+    def send(self, to_email: str, subject: str, body: str) -> SendResult:
+        return SendResult("failed", error="smtp_send_failed")
+
+
+def test_send_template_records_provider_failure(db):
+    db.add(NotificationTemplate(
+        code="password_reset_email_code",
+        channel="email",
+        subject_template="重置密码",
+        body_template="验证码 {code}",
+    ))
+    db.commit()
+
+    result = NotificationService(db, FailingProvider()).send_template(
+        "password_reset_email_code",
+        "user@example.com",
+        {"code": "123456"},
+        audit_content="密码重置验证码邮件",
+    )
+
+    assert result.status == "failed"
+    assert "smtp_send_failed" in result.content
+    assert "123456" not in result.content

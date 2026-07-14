@@ -40,7 +40,7 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    violation_id: Mapped[int] = mapped_column(ForeignKey("violations.id"))
+    violation_id: Mapped[int | None] = mapped_column(ForeignKey("violations.id"))
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     channel: Mapped[str] = mapped_column(String(16), default="email")
     recipient: Mapped[str | None] = mapped_column(String(255))
@@ -48,6 +48,7 @@ class Notification(Base):
     status: Mapped[str] = mapped_column(String(16), default="pending")
     provider: Mapped[str | None] = mapped_column(String(32))
     provider_msg_id: Mapped[str | None] = mapped_column(String(128))
+    template_code: Mapped[str | None] = mapped_column(String(32))
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

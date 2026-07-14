@@ -55,6 +55,7 @@ def test_get_media_denies_another_citizen(
     other = User(
         username="citizen-other",
         password_hash=hash_password("pass1234"),
+        email="citizen-other@example.com",
         role_id=seeded_roles["citizen"].id,
     )
     db.add(other)

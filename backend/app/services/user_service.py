@@ -1,9 +1,11 @@
 # app/services/user_service.py
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 from app.models.user import Role, User
+from app.services.email_verification_service import normalize_email
 
 VALID_USER_STATUS = {"active", "disabled"}
 
@@ -20,19 +22,26 @@ class UserService:
         self.db = db
 
     def create_user(self, *, username: str, password: str, phone: str | None,
-                    email: str | None, role_code: str) -> User:
+                    email: str, role_code: str) -> User:
         if self.db.query(User).filter_by(username=username).first():
             raise HTTPException(status_code=409, detail="用户名已存在")
+        normalized_email = normalize_email(email)
+        if self.db.query(User).filter_by(email=normalized_email).first():
+            raise HTTPException(status_code=409, detail="邮箱已存在")
         role = _get_role_by_code(self.db, role_code)
         user = User(
             username=username,
             password_hash=hash_password(password),
             phone=phone,
-            email=email,
+            email=normalized_email,
             role_id=role.id,
         )
         self.db.add(user)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(status_code=409, detail="用户名或邮箱已存在")
         self.db.refresh(user)
         return user
 
@@ -68,11 +77,24 @@ class UserService:
         if phone is not None:
             user.phone = phone
         if email is not None:
-            user.email = email
+            normalized_email = normalize_email(email)
+            duplicate = (
+                self.db.query(User)
+                .filter(User.email == normalized_email, User.id != user.id)
+                .first()
+            )
+            if duplicate:
+                raise HTTPException(status_code=409, detail="邮箱已存在")
+            user.email = normalized_email
         if status is not None:
             user.status = status
         if password is not None:
             user.password_hash = hash_password(password)
-        self.db.commit()
+            user.auth_version += 1
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise HTTPException(status_code=409, detail="邮箱已存在")
         self.db.refresh(user)
         return user

@@ -14,7 +14,106 @@ def _script_directory() -> ScriptDirectory:
 
 
 def test_alembic_has_single_head():
-    assert _script_directory().get_heads() == ["b4f2c8d6a109"]
+    assert _script_directory().get_heads() == ["20260714_120000"]
+
+
+def test_email_verification_migration_rejects_missing_email(monkeypatch):
+    script = _script_directory()
+    revision = script.get_revision("20260714_120000")
+    engine = sa.create_engine("sqlite://")
+    metadata = sa.MetaData()
+    users = sa.Table(
+        "users",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("email", sa.String(255), nullable=True),
+    )
+    sa.Table(
+        "notifications",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("violation_id", sa.Integer, nullable=False),
+    )
+
+    with engine.begin() as connection:
+        metadata.create_all(connection)
+        connection.execute(users.insert().values(id=1, email=None))
+        operations = Operations(MigrationContext.configure(connection))
+        monkeypatch.setattr(revision.module, "op", operations)
+
+        with pytest.raises(RuntimeError, match="邮箱"):
+            revision.module.upgrade()
+
+
+def test_email_verification_migration_rejects_normalized_duplicates(monkeypatch):
+    script = _script_directory()
+    revision = script.get_revision("20260714_120000")
+    engine = sa.create_engine("sqlite://")
+    metadata = sa.MetaData()
+    users = sa.Table(
+        "users",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("email", sa.String(255), nullable=True),
+    )
+    sa.Table(
+        "notifications",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("violation_id", sa.Integer, nullable=False),
+    )
+
+    with engine.begin() as connection:
+        metadata.create_all(connection)
+        connection.execute(users.insert(), [
+            {"id": 1, "email": "User@Example.com"},
+            {"id": 2, "email": " user@example.COM "},
+        ])
+        operations = Operations(MigrationContext.configure(connection))
+        monkeypatch.setattr(revision.module, "op", operations)
+
+        with pytest.raises(RuntimeError, match="重复邮箱"):
+            revision.module.upgrade()
+
+
+def test_email_verification_migration_upgrades_valid_legacy_schema(monkeypatch):
+    script = _script_directory()
+    revision = script.get_revision("20260714_120000")
+    engine = sa.create_engine("sqlite://")
+    metadata = sa.MetaData()
+    users = sa.Table(
+        "users",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("email", sa.String(255), nullable=True),
+    )
+    sa.Table(
+        "notifications",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("violation_id", sa.Integer, nullable=False),
+    )
+
+    with engine.begin() as connection:
+        metadata.create_all(connection)
+        connection.execute(users.insert().values(id=1, email=" User@Example.COM "))
+        operations = Operations(MigrationContext.configure(connection))
+        monkeypatch.setattr(revision.module, "op", operations)
+
+        revision.module.upgrade()
+
+        inspector = sa.inspect(connection)
+        assert "email_verification_codes" in inspector.get_table_names()
+        user_columns = {column["name"]: column for column in inspector.get_columns("users")}
+        assert user_columns["email"]["nullable"] is False
+        assert "auth_version" in user_columns
+        notification_columns = {
+            column["name"]: column
+            for column in inspector.get_columns("notifications")
+        }
+        assert notification_columns["violation_id"]["nullable"] is True
+        assert "template_code" in notification_columns
+        assert connection.scalar(sa.select(users.c.email)) == "user@example.com"
 
 
 def test_merge_revision_owns_violation_rules_table(monkeypatch):

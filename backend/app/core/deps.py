@@ -22,6 +22,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.get(User, user_id)
     if user is None or user.status != "active":
         raise HTTPException(status_code=401, detail="用户不存在或已禁用")
+    if payload.get("auth_version", 0) != user.auth_version:
+        raise HTTPException(status_code=401, detail="登录状态已失效")
     return user
 
 

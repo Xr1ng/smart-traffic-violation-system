@@ -7,7 +7,7 @@ class AdminUserOut(BaseModel):
     id: int
     username: str
     phone: str | None
-    email: str | None
+    email: str
     role_code: str
     role_id: int
     status: str
@@ -18,7 +18,7 @@ class UserCreateIn(BaseModel):
     username: str
     password: str
     phone: str | None = None
-    email: str | None = None
+    email: str
     role_code: str
 
 

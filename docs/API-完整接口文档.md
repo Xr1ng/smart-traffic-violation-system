@@ -1,6 +1,6 @@
 # 交通违章智能管理平台 · 完整接口文档
 
-> 版本：2026-07-10 · 基地址 `http://localhost:8000`（开发）/ 生产按实际域名  
+> 版本：2026-07-14 · 基地址 `http://localhost:8000`（开发）/ 生产按实际域名
 > 全局前缀：`/api/v1`（内部 AI 除外：`/internal/ai`）  
 > 所有响应为强类型 JSON（无 `{code,message,data}` 信封）。鉴权失败的 HTTP 状态码即错误信息。
 
@@ -28,7 +28,10 @@
 | 方法 | 路径 | 鉴权 | 说明 |
 |------|------|:--:|------|
 | POST | `/auth/login` | 无 | 登录 |
-| POST | `/auth/register` | 无 | 注册（citizen 角色） |
+| POST | `/auth/register/email-code` | 无 | 发送注册邮箱验证码 |
+| POST | `/auth/register` | 无 | 使用邮箱验证码注册（citizen 角色） |
+| POST | `/auth/password-reset/email-code` | 无 | 发送找回密码验证码 |
+| POST | `/auth/password-reset` | 无 | 使用邮箱验证码重置密码 |
 | GET | `/auth/me` | 登录 | 获取当前用户 |
 | PUT | `/auth/profile` | 登录 | 修改个人资料 |
 | PUT | `/auth/password` | 登录 | 修改密码 |
@@ -50,15 +53,70 @@
 // 403: 用户已禁用
 ```
 
+### POST /auth/register/email-code
+
+```json
+// 请求
+{ "email": "citizen@example.com" }
+
+// 202
+{ "message": "验证码已发送" }
+
+// 409: 邮箱已存在
+// 429: 60 秒内重复发送
+// 503: SMTP 或邮件模板不可用
+```
+
+验证码为 6 位数字，有效期 10 分钟。同一邮箱仅最新注册验证码有效，连续输错 5 次后失效。
+
 ### POST /auth/register
 
 ```json
 // 请求
-{ "username": "citizen1", "password": "pass1234", "phone": "1380000", "email": "c@e.com" }
+{
+  "username": "citizen1",
+  "password": "pass1234",
+  "phone": "1380000",
+  "email": "citizen@example.com",
+  "verification_code": "123456"
+}
 
 // 201 → TokenResponse（同 login）
-// 409: 用户名已存在
+// 400: 验证码无效或已过期
+// 409: 用户名或邮箱已存在
 ```
+
+邮箱为必填字段，在系统内全局唯一；服务端会去除首尾空格并转为小写。
+
+### POST /auth/password-reset/email-code
+
+```json
+// 请求
+{ "email": "citizen@example.com" }
+
+// 202（邮箱不存在、账号禁用、冷却中或内部发送失败均使用相同响应）
+{ "message": "如果邮箱可用，验证码将发送至该邮箱" }
+```
+
+该接口不会通过状态码或响应正文泄露邮箱是否已注册。实际发送失败写入通知记录供运维排查。
+
+### POST /auth/password-reset
+
+```json
+// 请求
+{
+  "email": "citizen@example.com",
+  "verification_code": "123456",
+  "new_password": "newpass5678"
+}
+
+// 200
+{ "message": "密码重置成功" }
+
+// 400: 验证码无效或已过期
+```
+
+密码重置成功后，旧密码不可再登录，重置前签发的 JWT 全部失效。
 
 ### GET /auth/me
 
@@ -86,6 +144,8 @@
 // 200: { "message": "密码修改成功" }
 // 400: 原密码错误
 ```
+
+修改密码成功后，修改前签发的 JWT 全部失效。
 
 ---
 

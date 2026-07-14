@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
     SMTP_FROM: str | None = None
+    SMTP_SECURITY: str = "starttls"
+    SMTP_TIMEOUT_SECONDS: float = 10.0
+    EMAIL_CODE_TTL_SECONDS: int = 600
+    EMAIL_CODE_RESEND_SECONDS: int = 60
+    EMAIL_CODE_MAX_ATTEMPTS: int = 5
     # 随手拍奖励（杨翼-9）
     REWARD_DEFAULT_AMOUNT: int = 10
     AI_PROVIDER: str = "stub"  # stub | local

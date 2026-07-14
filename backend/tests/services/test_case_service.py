@@ -22,7 +22,8 @@ def test_list_cases_reviewer_sees_all(db, reviewer_user, pending_case):
 
 def test_list_cases_camera_forbidden(db, seeded_roles):
     from app.models.user import User
-    cam = User(username="cam1", password_hash="h", role_id=seeded_roles["camera"].id)
+    cam = User(username="cam1", password_hash="h", email="cam1@example.com",
+               role_id=seeded_roles["camera"].id)
     db.add(cam); db.commit()
     svc = CaseService(db)
     with pytest.raises(HTTPException) as exc:

@@ -88,7 +88,11 @@ def citizen_user(db: Session, seeded_roles) -> User:
 
 @pytest.fixture()
 def citizen_token(citizen_user: User) -> str:
-    return create_access_token(subject=str(citizen_user.id), role="citizen")
+    return create_access_token(
+        subject=str(citizen_user.id),
+        role="citizen",
+        auth_version=citizen_user.auth_version,
+    )
 
 
 @pytest.fixture()
@@ -130,7 +134,11 @@ def reviewer_user(db: Session, seeded_roles) -> User:
 
 @pytest.fixture()
 def reviewer_auth_headers(reviewer_user: User) -> dict[str, str]:
-    token = create_access_token(subject=str(reviewer_user.id), role="reviewer")
+    token = create_access_token(
+        subject=str(reviewer_user.id),
+        role="reviewer",
+        auth_version=reviewer_user.auth_version,
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -149,7 +157,11 @@ def admin_user(db: Session, seeded_roles) -> User:
 
 @pytest.fixture()
 def admin_token(admin_user: User) -> str:
-    return create_access_token(subject=str(admin_user.id), role="admin")
+    return create_access_token(
+        subject=str(admin_user.id),
+        role="admin",
+        auth_version=admin_user.auth_version,
+    )
 
 
 @pytest.fixture()

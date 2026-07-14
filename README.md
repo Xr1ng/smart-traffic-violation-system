@@ -303,6 +303,25 @@ smart-traffic-violation-system/
    ```
 6. **登录**：用 `admin / admin1234`。
 
+### 启用邮件通知
+
+注册验证码、找回密码验证码和违章通知共用 SMTP 配置。在 `backend/.env` 中填写：
+
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=noreply@example.com
+SMTP_PASSWORD=替换为 SMTP 授权码
+SMTP_FROM=noreply@example.com
+SMTP_SECURITY=starttls
+SMTP_TIMEOUT_SECONDS=10
+EMAIL_CODE_TTL_SECONDS=600
+EMAIL_CODE_RESEND_SECONDS=60
+EMAIL_CODE_MAX_ATTEMPTS=5
+```
+
+`SMTP_SECURITY` 支持 `starttls`、`ssl` 和 `none`。未配置 SMTP 时应用仍可启动，但邮件发送接口会记录失败；注册验证码接口返回 `503`，找回密码验证码接口为防止枚举账号始终返回 `202`。
+
 ### 启用 LLM 分析报告
 
 统计分析页支持按日期范围汇总真实业务数据，并由 OpenAI-compatible 文本模型生成结构化中文报告。每次成功生成的报告都会保存为后端 Markdown 文件，可通过网页右侧的“历史报告”抽屉按统计周期查询、重新打开、打印或另存为 PDF。
