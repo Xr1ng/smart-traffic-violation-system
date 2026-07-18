@@ -56,8 +56,16 @@ def get_camera_device(
     return dev
 
 
-from app.services.notification_provider import EmailSmtpProvider, NotificationProvider
+from app.services.notification_provider import (
+    EmailSmtpProvider,
+    FakeNotificationProvider,
+    NotificationProvider,
+)
+from app.core.config import settings
 
 
 def get_notification_provider() -> NotificationProvider:
+    if not settings.SMTP_HOST:
+        return FakeNotificationProvider()
     return EmailSmtpProvider()
+

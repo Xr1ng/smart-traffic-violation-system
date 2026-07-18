@@ -40,14 +40,24 @@ class VehicleService:
             .with_for_update()
             .first()
         )
-        if vehicle is None:
-            raise HTTPException(status_code=404, detail="车辆不存在或不可绑定")
-        if vehicle_type and vehicle.vehicle_type and vehicle_type != vehicle.vehicle_type:
-            raise HTTPException(status_code=409, detail="车辆信息不匹配")
-        if color and vehicle.color and color != vehicle.color:
-            raise HTTPException(status_code=409, detail="车辆信息不匹配")
+        if vehicle is not None:
+            if vehicle_type and vehicle.vehicle_type and vehicle_type != vehicle.vehicle_type:
+                raise HTTPException(status_code=409, detail="车辆信息不匹配")
+            if color and vehicle.color and color != vehicle.color:
+                raise HTTPException(status_code=409, detail="车辆信息不匹配")
+            vehicle.owner_id = owner_id
+            self.db.commit()
+            self.db.refresh(vehicle)
+            return vehicle
 
-        vehicle.owner_id = owner_id
+        # Vehicle doesn't exist or already owned — create a new one for this citizen
+        if self.db.query(Vehicle).filter_by(plate_no=plate_no).first():
+            raise HTTPException(status_code=409, detail="该车牌已被其他人绑定")
+        vehicle = Vehicle(
+            plate_no=plate_no, owner_id=owner_id,
+            vehicle_type=vehicle_type, color=color,
+        )
+        self.db.add(vehicle)
         self.db.commit()
         self.db.refresh(vehicle)
         return vehicle

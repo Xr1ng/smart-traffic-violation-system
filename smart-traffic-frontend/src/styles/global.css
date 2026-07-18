@@ -194,6 +194,23 @@ a {
   }
 }
 
+/* element-plus 子菜单弹出层暗色背景，匹配侧边栏 */
+.el-menu--popup {
+  --el-bg-color-overlay: var(--sidebar-bg, #304156) !important;
+  background: var(--sidebar-bg, #304156) !important;
+}
+.el-menu--popup .el-menu-item {
+  color: #c8d1d8;
+  background: var(--sidebar-bg, #304156);
+}
+.el-menu--popup .el-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+.el-menu--popup .el-menu-item.is-active {
+  color: #fff !important;
+  background: rgba(64, 158, 255, 0.24) !important;
+}
+
 @media print {
   html,
   body,

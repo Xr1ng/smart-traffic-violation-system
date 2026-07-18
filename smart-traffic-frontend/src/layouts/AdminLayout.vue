@@ -149,6 +149,8 @@ function nav(path) {
 .sidebar-menu :deep(.el-menu-item), .sidebar-menu :deep(.el-sub-menu__title) { color: #c8d1d8; }
 .sidebar-menu :deep(.el-menu-item:hover), .sidebar-menu :deep(.el-sub-menu__title:hover) { background: rgba(255,255,255,0.08); }
 .sidebar-menu :deep(.el-menu-item.is-active) { color: #fff; background: rgba(64,158,255,0.24); }
+.sidebar-menu :deep(.el-sub-menu .el-menu) { background: transparent; }
+.sidebar-menu :deep(.el-sub-menu .el-menu .el-menu-item) { background: transparent; }
 .layout-body { min-width: 0; }
 .app-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 60px; padding: 0 20px; background: var(--header-bg); border-bottom: 1px solid var(--border-color); }
 .header-context { display: flex; align-items: center; min-width: 0; gap: 10px; }

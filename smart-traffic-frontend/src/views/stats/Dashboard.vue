@@ -289,7 +289,8 @@ function renderHeatmap() {
 
   chart.setOption({
     tooltip: {
-      position: 'top',
+      confine: true,
+      position: (point) => [point[0] + 12, point[1] - 12],
       formatter: p => `${roads[p.value[1]]} · ${slots[p.value[0]]}时<br/>违章数: <b>${p.value[2]}</b> 件`,
       backgroundColor: colors.tooltipBackground,
       borderColor: colors.tooltipBorder,
